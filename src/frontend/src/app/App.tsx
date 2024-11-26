@@ -1,20 +1,34 @@
 import Sidesbar from '../components/sidebar';
+import bashamememeImage from '../assets/bashamememe.png';
+import Gallery from '../components/gallery';
 
 function App() {
   return (
-    <div className="min-h-screen bg-black flex">
-      <Sidesbar />
-      <div className="flex-1 flex flex-col">
-        <header className="p-4 bg-[#121212] flex justify-between items-center h-24 w-full"></header>
+    <div className="min-h-screen bg-black px-4">
+      <header className="p-2 bg-black h-24 w-full rounded-b-xl">
+        <div className="flex items-center space-x-4">
+          <img
+            src={bashamememeImage}
+            alt="logo"
+            className="w-20 h-20 rounded-full"
+          />
+          <h1 className="text-5xl mt-4 font-bold text-green-500">Farizzler</h1>
+        </div>
+      </header>
 
-        <div className='w-1 h-[485px] mb-2 mt-2 bg-[#121212]'></div>
-        
-        <main className="flex-1 overflow-auto">
-        </main>
-        
-        <footer className="p-4 bg-[#121212] flex justify-between items-center h-16 w-full">
-        </footer>
-      </div>
+
+      <main className="grid grid-cols-1 md:grid-cols-6 gap-3 mt-4 rounded-xl overflow-hidden">
+        <div className="hidden md:block md:col-span-1 rounded-l-xl">
+          <Sidesbar />
+        </div>
+        <div className="col-span-1 md:col-span-5 rounded-xl">
+          <Gallery />
+        </div>
+      </main>
+
+      <footer className="p-4 bg-black w-full h-12">
+        {/* Add your footer content here */}
+      </footer>
     </div>
   );
 }
