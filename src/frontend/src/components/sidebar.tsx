@@ -9,7 +9,7 @@ const Sidesbar = () => {
   };
 
   return (
-    <section className="bg-[#121212]">
+    <section className="bg-[#121212] rounded-xl">
       <div className="container mx-auto text-center">
         <div className='border-1 border-[#121212] rounded-2xl inline-block h-[530px]'>
 

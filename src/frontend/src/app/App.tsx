@@ -17,11 +17,11 @@ function App() {
       </header>
 
 
-      <main className="grid grid-cols-1 md:grid-cols-6 gap-3 mt-4 rounded-xl overflow-hidden">
-        <div className="hidden md:block md:col-span-1 rounded-l-xl">
+      <main className="grid grid-cols-1 md:grid-cols-9 gap-3 mt-4 rounded-xl overflow-hidden">
+        <div className="hidden md:block md:col-span-2 rounded-l-xl">
           <Sidesbar />
         </div>
-        <div className="col-span-1 md:col-span-5 rounded-xl">
+        <div className="col-span-1 md:col-span-7 rounded-xl ml-6">
           <Gallery />
         </div>
       </main>
