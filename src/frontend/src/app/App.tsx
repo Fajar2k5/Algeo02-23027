@@ -5,12 +5,12 @@ import Gallery from '../components/gallery';
 function App() {
   return (
     <div className="min-h-screen bg-black px-4">
-      <header className="p-2 bg-black h-24 w-full rounded-b-xl">
+      <header className="p-2 bg-black h-20 w-full rounded-b-xl">
         <div className="flex items-center space-x-4">
           <img
             src={bashamememeImage}
             alt="logo"
-            className="w-20 h-20 rounded-full"
+            className="w-16 h-16 rounded-full"
           />
           <h1 className="text-5xl mt-4 font-bold text-green-500">Farizzler</h1>
         </div>

@@ -7,3 +7,11 @@ import json
 
 app = FastAPI()
 
+# @app.get("/queryimage")
+
+# @app.post("/uploadmapper/")
+
+# @app.post("/uploadmidi/")
+
+# @app.post("/uploadimage")
+

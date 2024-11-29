@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { Search, PlayCircle } from 'lucide-react';
+"use client"
 
+import { useState } from 'react';
+import UploadSection from './uploadbox';
+import { Mic} from 'lucide-react';
 const Sidesbar = () => {
   const [isListening, setIsListening] = useState(false);
 
@@ -9,10 +11,13 @@ const Sidesbar = () => {
   };
 
   return (
-    <section className="bg-[#121212] rounded-xl">
-      <div className="container mx-auto text-center">
-        <div className='border-1 border-[#121212] rounded-2xl inline-block h-[530px]'>
-
+    <section className="bg-[#121212] rounded-xl h-full">
+      <div className="flex flex-col h-full">
+        <div className="flex-grow p-4">
+          <Mic className='text-green-500'></Mic>
+        </div>
+        <div className="w-full rounded-xl">
+          <UploadSection />
         </div>
       </div>
     </section>
@@ -20,3 +25,4 @@ const Sidesbar = () => {
 };
 
 export default Sidesbar;
+
