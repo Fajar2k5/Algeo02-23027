@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import axios from "axios";
 
 export default function UploadSection() {
   const [activeTab, setActiveTab] = useState<string | null>("MIDI");
   const [isDragging, setIsDragging] = useState(false);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -35,12 +38,35 @@ export default function UploadSection() {
     if (e.target.files?.length) {
       const file = e.target.files[0];
       setFileName(file.name);
+      setSelectedFile(file);
 
       if (activeTab === "Image") {
         previewImage(file);
       }
     }
   };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      alert("No file selected!");
+      return;
+    }
+  
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+  
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/upload/", formData, {
+        headers: {},
+      });
+      console.log("Upload success:", response.data);
+      alert("File uploaded successfully!");
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("File upload failed!");
+    }
+  };
+  
 
   const previewImage = (file: File) => {
     if (file.type.startsWith("image/")) {
@@ -56,11 +82,13 @@ export default function UploadSection() {
     setActiveTab((prevTab) => (prevTab === tab ? null : tab));
     setPreviewSrc(null);
     setFileName(null);
+    selectedFile && setSelectedFile(null);
   };
 
   const handleRemoveImage = () => {
     setPreviewSrc(null);
     setFileName(null);
+    selectedFile && setSelectedFile(null);
   };
 
   return (
@@ -131,10 +159,11 @@ export default function UploadSection() {
       </div>
 
       <button
+        onClick={handleUpload}
         className={`mt-2 w-28 py-1 px-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-xs transition-colors duration-200 ${
-          !activeTab ? "opacity-50 cursor-not-allowed" : ""
+          !activeTab || !selectedFile ? "opacity-50 cursor-not-allowed" : ""
         }`}
-        disabled={!activeTab}
+        disabled={!activeTab || !selectedFile}
       >
         Upload
       </button>
