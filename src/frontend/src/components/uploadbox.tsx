@@ -71,7 +71,7 @@ export default function UploadSection() {
           <button
             key={tab}
             onClick={() => handleTabClick(tab)}
-            className={`px-3 py-1 rounded-full text-xs ${
+            className={`px-3 py-1 rounded-full text-xs w-16 text-center ${
               activeTab === tab
                 ? "bg-white text-black"
                 : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800/50"
