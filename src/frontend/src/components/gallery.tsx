@@ -6,31 +6,34 @@ interface Song {
   id: number;
   cover: string | null;
   title: string;
+  src: string; // Include the audio file path for the song
 }
 
-const Gallery = () => {
+interface GalleryProps {
+  onSelectSong: (song: Song) => void; // Callback to notify parent
+}
+
+const Gallery: React.FC<GalleryProps> = ({ onSelectSong }) => {
   const [activeTab, setActiveTab] = useState<"Image" | "MIDI">("Image");
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const placeholder = "https://via.placeholder.com/100";
 
-  // For Pagination
-  const itemsPerPage = 12; // 4x3 grid
+  const itemsPerPage = 12;
   const totalPages = Math.max(1, Math.ceil(songs.length / itemsPerPage));
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = songs.slice(indexOfFirstItem, indexOfLastItem);
-  
+
   useEffect(() => {
-    // Fetch data from the backend when the tab changes
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(`http://127.0.0.1:8000/gallery/${activeTab}`);
-        console.log("Gallery data:", response.data);
+        const response = await axios.get(
+          `http://127.0.0.1:8000/gallery/${activeTab}`
+        );
         setSongs(response.data);
-        // setCurrentPage(1); // Reset to first page when switching tabs, optional
       } catch (error) {
         console.error("Error fetching gallery data:", error);
         setSongs([]);
@@ -42,7 +45,6 @@ const Gallery = () => {
     fetchData();
   }, [activeTab]);
 
-  // Go between pages
   const nextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
@@ -57,7 +59,6 @@ const Gallery = () => {
 
   return (
     <div className="bg-[#121212] rounded-xl p-4 h-[550px] flex flex-col">
-      {/* Buttons stay at the top */}
       <div className="flex justify-center space-x-4 mb-4">
         {["Image", "MIDI"].map((tab) => (
           <button
@@ -75,7 +76,6 @@ const Gallery = () => {
       </div>
 
       <div className="flex-grow flex flex-col justify-between">
-        {/* Grid Container */}
         <div className="flex justify-center items-start pt-2">
           {isLoading ? (
             <div className="text-zinc-400">Loading...</div>
@@ -83,18 +83,19 @@ const Gallery = () => {
             <div className="text-zinc-400">No {activeTab}s found</div>
           ) : (
             <div className="grid grid-cols-4 grid-rows-3 gap-3">
-              {currentItems.map((item) => (
+              {currentItems.map((song) => (
                 <div
-                  key={item.id}
-                  className="bg-[#1A1A1A] p-1 rounded-lg hover:scale-105 transition-transform flex flex-col items-center w-48"
+                  key={song.id}
+                  className="bg-[#1A1A1A] p-1 rounded-lg hover:scale-105 transition-transform flex flex-col items-center w-48 cursor-pointer"
+                  onClick={() => onSelectSong(song)} // Notify parent when a song is clicked
                 >
                   <img
-                    src={item.cover || placeholder}
-                    alt={item.title}
+                    src={song.cover || placeholder}
+                    alt={song.title}
                     className="w-full h-24 object-cover rounded-md"
                   />
                   <div className="mt-1 text-white text-center">
-                    <h3 className="text-xs font-medium">{item.title}</h3>
+                    <h3 className="text-xs font-medium">{song.title}</h3>
                   </div>
                 </div>
               ))}
@@ -102,7 +103,6 @@ const Gallery = () => {
           )}
         </div>
 
-        {/* Pagination Buttons - don't show if there are no songs*/}
         {!isLoading && songs.length > 0 && (
           <div className="flex justify-center items-center gap-4 mt-4">
             <button

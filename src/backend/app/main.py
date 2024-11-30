@@ -71,6 +71,7 @@ async def get_gallery(tab: str, request: Request):
                 "id": index + 1,
                 "cover": f"{base_url}album/{song['pic_name']}" if os.path.exists(f"uploads/album/{song['pic_name']}") else None,
                 "title": song["audio_file"],
+                "src": f"{base_url}song/{song['audio_file']}"
             }
             for index, song in enumerate(songs_data)
         ]
