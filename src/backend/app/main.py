@@ -1,14 +1,12 @@
 import os
-from fastapi import FastAPI, UploadFile, File, HTTPException
+import json
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi import Request
-
 
 app = FastAPI()
 
-# Enable CORS for frontend communication
-origins = ["http://localhost:5173"]  # Update with your frontend URL
+origins = ["http://localhost:5173"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -17,16 +15,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/album", StaticFiles(directory="album"), name="album")
+app.mount("/song", StaticFiles(directory="song"), name="song")
+
+newest_json_path = None
+
 
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
+    global newest_json_path
+
     file_type = file.content_type
 
     if file_type not in ["image/png", "image/jpeg", "audio/mid", "application/json"]:
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
-    directory = f"uploads/{file_type.split('/')[0]}"
+    directory = f"uploads/{'album' if file_type.startswith('image') else 'song' if file_type == 'audio/mid' else 'application'}"
     os.makedirs(directory, exist_ok=True)
 
     file_location = f"{directory}/{file.filename}"
@@ -34,42 +38,41 @@ async def upload_file(file: UploadFile = File(...)):
         buffer.write(await file.read())
 
     if file_type == "application/json":
-        return {"file_path": file_location}
+        newest_json_path = file_location  
+        return {"file_path": file_location, "message": "JSON file uploaded and set as the newest."}
 
-#belum jadi anjay
-async def gallery_mapper(tab: str):
-    if tab == "Image":
-        return "image"
-    elif tab == "MIDI":
-        return "audio"
-    else:
-        return None
+    return {"file_path": file_location, "message": "File uploaded successfully."}
+
 
 @app.get("/gallery/{tab}")
 async def get_gallery(tab: str, request: Request):
+    global newest_json_path
+
+    if not newest_json_path or not os.path.exists(newest_json_path):
+        raise HTTPException(status_code=404, detail="No JSON file uploaded yet.")
+
     base_url = str(request.base_url)
+
+    with open(newest_json_path, "r") as json_file:
+        songs_data = json.load(json_file)
+
     if tab == "Image":
         return [
-            {"id": 1, "cover": f"{base_url}uploads/image/Hu.Tao.full.3510928.jpg", "title": "Image Song 1"},
-            {"id": 2, "cover": f"{base_url}uploads/image/nota_cat3pcs.jpg", "title": "Image Song 2"},
-            {"id": 3, "cover": f"{base_url}uploads/image/image3.jpg", "title": "Image Song 3"},
-            {"id": 4, "cover": f"{base_url}uploads/image/image4.jpg", "title": "Image Song 4"},
-            {"id": 5, "cover": f"{base_url}uploads/image/image5.jpg", "title": "Image Song 5"},
-            {"id": 6, "cover": f"{base_url}uploads/image/image6.jpg", "title": "Image Song 6"},
-            {"id": 7, "cover": f"{base_url}uploads/image/image7.jpg", "title": "Image Song 7"},
-            {"id": 8, "cover": f"{base_url}uploads/image/image8.jpg", "title": "Image Song 8"},
-            {"id": 9, "cover": f"{base_url}uploads/image/image9.jpg", "title": "Image Song 9"},
-         ]
+            {
+                "id": index + 1,
+                "cover": f"{base_url}album/{song['pic_name']}",
+                "title": song["audio_file"].split(".")[0], 
+            }
+            for index, song in enumerate(songs_data)
+        ]
     elif tab == "MIDI":
         return [
-            {"id": 1, "cover": f"{base_url}uploads/audio/Sword Art Online II - IGNITE.mid", "title": "MIDI Song 1"},
-            {"id": 2, "cover": None, "title": "MIDI Song 2"},
-            {"id": 3, "cover": None, "title": "MIDI Song 3"},
-            {"id": 4, "cover": None, "title": "MIDI Song 4"},
-            {"id": 5, "cover": None, "title": "MIDI Song 5"},
-            {"id": 6, "cover": None, "title": "MIDI Song 6"},
-            {"id": 7, "cover": None, "title": "MIDI Song 7"},
+            {
+                "id": index + 1,
+                "cover": f"{base_url}album/{song['pic_name']}" if os.path.exists(f"uploads/album/{song['pic_name']}") else None,
+                "title": song["audio_file"],
+            }
+            for index, song in enumerate(songs_data)
         ]
-    else:
-        return []
 
+    return {"error": "Invalid tab specified."}

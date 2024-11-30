@@ -27,7 +27,6 @@ function App() {
       </main>
 
       <footer className="p-4 bg-black w-full h-12">
-        {/* Add your footer content here */}
       </footer>
     </div>
   );
