@@ -1,62 +1,31 @@
-import React, { useRef, useState, useEffect } from "react";
-import { Play, Pause } from "lucide-react";
-import { Song } from "../app/App"; // Ensure the import path is correct
+import React from "react";
+import { Song } from "./gallery"; // Adjust the import path as needed
 
 interface AudioPlayerProps {
   selectedSong: Song | null;
 }
 
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ selectedSong }) => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  // Play the selected song automatically when it's updated
-  useEffect(() => {
-    if (audioRef.current && selectedSong) {
-      audioRef.current.src = selectedSong.src; // Set the audio source
-      audioRef.current.play(); // Play the audio
-      setIsPlaying(true); // Update UI state to playing
-    }
-  }, [selectedSong]); // Run effect when selectedSong changes
-
-  // Toggle play/pause state
-  const playPauseHandler = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying); // Toggle the play state
-    }
-  };
-
   return (
-    <div className="flex items-center justify-between bg-black text-white p-4 rounded-lg">
-      <div className="flex items-center space-x-4">
-        <img
-          src={selectedSong?.cover || "/default-cover.jpg"}
-          alt="Album Cover"
-          className="w-12 h-12 rounded-lg"
-        />
-        <div>
-          <p className="text-sm font-bold">
-            {selectedSong?.title || "No Song Selected"}
-          </p>
+    <div className="p-4 bg-[#1A1A1A] flex items-center justify-center">
+      {selectedSong ? (
+        <div className="flex items-center space-x-4">
+          <img
+            src={selectedSong.cover || "https://via.placeholder.com/50"}
+            alt={selectedSong.title}
+            className="w-12 h-12 object-cover rounded-full"
+          />
+          <div>
+            <p className="text-white">{selectedSong.title}</p>
+            {/* Add audio controls */}
+            <audio controls src={selectedSong.src} className="w-full mt-2">
+              Your browser does not support the audio element.
+            </audio>
+          </div>
         </div>
-      </div>
-
-      <div className="flex items-center">
-        <button onClick={playPauseHandler} className="rounded-full hover:bg-white">
-          {isPlaying ? (
-            <Pause className="w-4 h-4 text-white hover:text-black" />
-          ) : (
-            <Play className="w-4 h-4 text-white hover:text-black" />
-          )}
-        </button>
-      </div>
-
-      <audio ref={audioRef} />
+      ) : (
+        <p className="text-zinc-400">No song selected</p>
+      )}
     </div>
   );
 };

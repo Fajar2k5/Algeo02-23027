@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-interface Song {
+export interface Song {
   id: number;
   cover: string | null;
   title: string;
@@ -11,9 +11,10 @@ interface Song {
 
 interface GalleryProps {
   onSelectSong: (song: Song) => void; // Callback to notify parent
+  refreshTrigger: number; // Trigger to refresh gallery
 }
 
-const Gallery: React.FC<GalleryProps> = ({ onSelectSong }) => {
+const Gallery: React.FC<GalleryProps> = ({ onSelectSong, refreshTrigger }) => {
   const [activeTab, setActiveTab] = useState<"Image" | "MIDI">("Image");
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,6 +35,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong }) => {
           `http://127.0.0.1:8000/gallery/${activeTab}`
         );
         setSongs(response.data);
+        setCurrentPage(1); // Reset to first page on new data
       } catch (error) {
         console.error("Error fetching gallery data:", error);
         setSongs([]);
@@ -43,7 +45,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong }) => {
     };
 
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, refreshTrigger]); // Added refreshTrigger to dependencies
 
   const nextPage = () => {
     if (currentPage < totalPages) {
@@ -87,7 +89,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong }) => {
                 <div
                   key={song.id}
                   className="bg-[#1A1A1A] p-1 rounded-lg hover:scale-105 transition-transform flex flex-col items-center w-48 cursor-pointer"
-                  onClick={() => onSelectSong(song)} // Notify parent when a song is clicked
+                  onClick={() => onSelectSong(song)} 
                 >
                   <img
                     src={song.cover || placeholder}
@@ -95,7 +97,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong }) => {
                     className="w-full h-24 object-cover rounded-md"
                   />
                   <div className="mt-1 text-white text-center">
-                    <h3 className="text-xs font-medium">{song.title}</h3>
+                    <h3 className="text-xs font-medium truncate w-full">{song.title}</h3>
                   </div>
                 </div>
               ))}

@@ -1,21 +1,22 @@
 import { useState } from "react";
-import Sidesbar from "../components/sidebar";
+import Sidebar from "../components/sidebar";
 import bashamememeImage from "../assets/bashamememe.png";
-import Gallery from "../components/gallery";
+import Gallery, { Song } from "../components/gallery";
 import AudioPlayer from "../components/audioplayer";
-
-export interface Song {
-  id: number;
-  cover: string | null;
-  title: string;
-  src: string; // Ensure this matches the audio source property in your data
-}
 
 function App() {
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
 
   const handleSelectSong = (song: Song) => {
     setSelectedSong(song); 
+  };
+
+  // State to trigger gallery refresh
+  const [refreshGallery, setRefreshGallery] = useState<number>(0);
+
+  // Callback function to handle successful uploads
+  const handleUploadSuccess = () => {
+    setRefreshGallery(prev => prev + 1);
   };
 
   return (
@@ -33,10 +34,12 @@ function App() {
 
       <main className="grid grid-cols-1 md:grid-cols-9 gap-3 mt-4 rounded-xl overflow-hidden">
         <div className="hidden md:block md:col-span-2 rounded-l-xl">
-          <Sidesbar />
+          {/* Pass the callback to Sidebar */}
+          <Sidebar onUploadSuccess={handleUploadSuccess} />
         </div>
         <div className="col-span-1 md:col-span-7 rounded-xl ml-6">
-          <Gallery onSelectSong={handleSelectSong} />
+          {/* Pass the refresh trigger to Gallery */}
+          <Gallery onSelectSong={handleSelectSong} refreshTrigger={refreshGallery} />
         </div>
       </main>
 
