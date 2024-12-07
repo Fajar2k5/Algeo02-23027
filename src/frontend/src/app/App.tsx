@@ -8,15 +8,14 @@ function App() {
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
 
   const handleSelectSong = (song: Song) => {
-    setSelectedSong(song); 
+    setSelectedSong(song);
   };
 
-  // State to trigger gallery refresh
   const [refreshGallery, setRefreshGallery] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<"Image" | "MIDI" | null>(null);
 
-  // Callback function to handle successful uploads
   const handleUploadSuccess = () => {
-    setRefreshGallery(prev => prev + 1);
+    setRefreshGallery((prev) => prev + 1);
   };
 
   return (
@@ -34,12 +33,15 @@ function App() {
 
       <main className="grid grid-cols-1 md:grid-cols-9 gap-3 mt-4 rounded-xl overflow-hidden">
         <div className="hidden md:block md:col-span-2 rounded-l-xl h-full">
-          {/* Pass the callback to Sidebar */}
           <Sidebar onUploadSuccess={handleUploadSuccess} />
         </div>
         <div className="col-span-1 md:col-span-7 rounded-xl ml-6 h-full">
-          {/* Pass the refresh trigger to Gallery */}
-          <Gallery onSelectSong={handleSelectSong} refreshTrigger={refreshGallery} />
+          <Gallery
+            onSelectSong={handleSelectSong}
+            refreshTrigger={refreshGallery}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab} 
+          />
         </div>
       </main>
 

@@ -6,16 +6,22 @@ export interface Song {
   id: number;
   cover: string | null;
   title: string;
-  src: string; // Include the audio file path for the song
+  src: string; 
 }
 
 interface GalleryProps {
   onSelectSong: (song: Song) => void;
   refreshTrigger: number;
+  activeTab: "Image" | "MIDI" | null;
+  setActiveTab: React.Dispatch<React.SetStateAction<"Image" | "MIDI" | null>>;
 }
 
-const Gallery: React.FC<GalleryProps> = ({ onSelectSong, refreshTrigger }) => {
-  const [activeTab, setActiveTab] = useState<"Image" | "MIDI" | null>("Image");
+const Gallery: React.FC<GalleryProps> = ({
+  onSelectSong,
+  refreshTrigger,
+  activeTab,
+  setActiveTab,
+}) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +39,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong, refreshTrigger }) => {
       try {
         const response = await axios.get(`http://127.0.0.1:8000/gallery/`);
         setSongs(response.data);
-        setCurrentPage(1); // Reset to first page on new data
+        setCurrentPage(1); 
       } catch (error) {
         console.error("Error fetching gallery data:", error);
         setSongs([]);
@@ -58,9 +64,10 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong, refreshTrigger }) => {
   };
 
   const handleTabClick = (tab: "Image" | "MIDI") => {
-    // Toggle tab state. If the clicked tab is already active, unselect it (set to null).
-    setActiveTab((prevTab) => (prevTab === tab ? null : tab));
+    setActiveTab((prevTab: "Image" | "MIDI" | null) => (prevTab === tab ? null : tab));
   };
+  
+  
 
   return (
     <div className="bg-[#121212] rounded-xl p-4 h-[570px] flex flex-col">

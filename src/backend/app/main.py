@@ -19,29 +19,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create directories for albums and songs if they do not exist
 if not os.path.exists("album"):
     os.makedirs("album")
 
 if not os.path.exists("song"):
     os.makedirs("song")
 
-# Serve static files for album and song
 app.mount("/album", StaticFiles(directory="album"), name="album")
 app.mount("/song", StaticFiles(directory="song"), name="song")
 
-# Variable to store the path of the latest uploaded JSON file
 newest_json_path = None
 
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
     file_type = file.content_type
 
-    # Supported file types
     if file_type not in ["image/png", "image/jpeg", "audio/mid", "application/json", "application/x-zip-compressed"]:
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
-    # Handling non-ZIP files
     if file_type != "application/x-zip-compressed":
         directory = f"uploads/{'album' if file_type.startswith('image') else 'song' if file_type == 'audio/mid' else 'application'}"
         os.makedirs(directory, exist_ok=True)
@@ -57,13 +52,11 @@ async def upload_file(file: UploadFile = File(...)):
         
         return {"file_path": file_location, "message": "File uploaded successfully."}
 
-    # Handling ZIP files: deleting old album and song directories first
     if os.path.exists("album"):
         shutil.rmtree("album")
     if os.path.exists("song"):
         shutil.rmtree("song")
 
-    # Re-create album and song directories for new data
     os.makedirs("album", exist_ok=True)
     os.makedirs("song", exist_ok=True)
 
@@ -74,19 +67,16 @@ async def upload_file(file: UploadFile = File(...)):
     with zipfile.ZipFile(file.file, 'r') as zip_ref:
         zip_ref.extractall(zip_directory)
 
-    # Assuming the extracted files are inside a folder (i.e., the first folder in the ZIP)
     extracted_files = os.listdir(zip_directory)
     folderfiles = os.path.join(zip_directory, extracted_files[0])
     print(f"Extracted files: {folderfiles}")
 
-    # Move files to the appropriate directories
     for filename in os.listdir(folderfiles):
         if filename.endswith((".jpg", ".jpeg", ".png")):
             shutil.move(os.path.join(folderfiles, filename), "album")
         elif filename.endswith((".midi", ".mid")):
             shutil.move(os.path.join(folderfiles, filename), "song")
 
-    # Clean up the temporary extraction directory
     shutil.rmtree(zip_directory)
 
     return {"message": "ZIP file extracted and files sorted into album and song directories."}
@@ -94,6 +84,13 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.get("/gallery/")
 async def get_gallery(request: Request):
+
+    if not os.path.exists("album"):
+        os.makedirs("album")
+    
+    if not os.path.exists("song"):
+        os.makedirs("song")
+
     album_dir = Path("album")
     song_dir = Path("song")
 
