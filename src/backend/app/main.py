@@ -19,25 +19,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Create directories for albums and songs if they do not exist
 if not os.path.exists("album"):
     os.makedirs("album")
 
 if not os.path.exists("song"):
     os.makedirs("song")
 
+# Serve static files for album and song
 app.mount("/album", StaticFiles(directory="album"), name="album")
 app.mount("/song", StaticFiles(directory="song"), name="song")
 
+# Variable to store the path of the latest uploaded JSON file
 newest_json_path = None
-
 
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
     file_type = file.content_type
 
+    # Supported file types
     if file_type not in ["image/png", "image/jpeg", "audio/mid", "application/json", "application/x-zip-compressed"]:
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
+    # Handling non-ZIP files
     if file_type != "application/x-zip-compressed":
         directory = f"uploads/{'album' if file_type.startswith('image') else 'song' if file_type == 'audio/mid' else 'application'}"
         os.makedirs(directory, exist_ok=True)
@@ -47,69 +51,75 @@ async def upload_file(file: UploadFile = File(...)):
             buffer.write(await file.read())
         
         if file_type == "application/json":
+            global newest_json_path
             newest_json_path = file_location
             return {"file_path": file_location, "message": "JSON file uploaded and set as the newest."}
         
         return {"file_path": file_location, "message": "File uploaded successfully."}
 
+    # Handling ZIP files: deleting old album and song directories first
+    if os.path.exists("album"):
+        shutil.rmtree("album")
+    if os.path.exists("song"):
+        shutil.rmtree("song")
+
+    # Re-create album and song directories for new data
+    os.makedirs("album", exist_ok=True)
+    os.makedirs("song", exist_ok=True)
+
+    # Extract ZIP file
     zip_directory = f"temp_{file.filename}_extracted"
     os.makedirs(zip_directory, exist_ok=True)
 
     with zipfile.ZipFile(file.file, 'r') as zip_ref:
         zip_ref.extractall(zip_directory)
 
-    album_directory = "album"
-    song_directory = "song"
-    os.makedirs(album_directory, exist_ok=True)
-    os.makedirs(song_directory, exist_ok=True)
-
+    # Assuming the extracted files are inside a folder (i.e., the first folder in the ZIP)
     extracted_files = os.listdir(zip_directory)
     folderfiles = os.path.join(zip_directory, extracted_files[0])
     print(f"Extracted files: {folderfiles}")
 
-    # Handle extracted files
+    # Move files to the appropriate directories
     for filename in os.listdir(folderfiles):
-        if filename.endswith(".jpg") or filename.endswith(".jpeg") or filename.endswith(".png"):
-            shutil.move(os.path.join(folderfiles, filename), album_directory)
-        elif filename.endswith(".midi") or filename.endswith(".mid"):
-            shutil.move(os.path.join(folderfiles, filename), song_directory)
-    
+        if filename.endswith((".jpg", ".jpeg", ".png")):
+            shutil.move(os.path.join(folderfiles, filename), "album")
+        elif filename.endswith((".midi", ".mid")):
+            shutil.move(os.path.join(folderfiles, filename), "song")
 
+    # Clean up the temporary extraction directory
     shutil.rmtree(zip_directory)
 
     return {"message": "ZIP file extracted and files sorted into album and song directories."}
 
-@app.get("/gallery/{tab}")
-async def get_gallery(tab: str, request: Request):
+
+@app.get("/gallery/")
+async def get_gallery(request: Request):
     album_dir = Path("album")
     song_dir = Path("song")
-    
-    if not album_dir.exists() or not song_dir.exists():
-        raise HTTPException(status_code=404, detail="Required directories do not exist.")
-    
+
     base_url = str(request.base_url)
 
-    if tab == "Image":
-        image_files = [file.name for file in album_dir.glob("*") if file.is_file()]
-        return [
-            {
-                "id": index + 1,
-                "cover": f"{base_url}album/{image_file}",
-                "title": image_file.split(".")[0],
-            }
-            for index, image_file in enumerate(image_files)
-        ]
-    
-    elif tab == "MIDI":
-        midi_files = [file.name for file in song_dir.glob("*.mid") if file.is_file()]
-        return [
-            {
-                "id": index + 1,
-                "cover": f"{base_url}album/{midi_file.split('.')[0]}.jpg" if os.path.exists(f"album/{midi_file.split('.')[0]}.jpg") else None,
-                "title": midi_file,
-                "src": f"{base_url}song/{midi_file}"
-            }
-            for index, midi_file in enumerate(midi_files)
-        ]
-    
-    return {"error": "Invalid tab specified."}
+    audio_to_pic = {}
+    if newest_json_path:
+        try:
+            with open(newest_json_path, 'r') as f:
+                json_data = json.load(f)
+                audio_to_pic = {entry["audio_file"]: entry["pic_name"] for entry in json_data}
+        except Exception as e:
+            return {"error": f"Failed to load JSON file: {e}"}
+
+    gallery_files = [file.name for file in song_dir.glob("*.mid") if file.is_file()]
+
+    filtered_gallery_files = [file for file in gallery_files if file in audio_to_pic]
+
+    result = [
+        {
+            "id": index + 1,
+            "cover": f"{base_url}album/{audio_to_pic.get(midi_file, '').split('.')[0]}.jpg" if audio_to_pic.get(midi_file) else None,
+            "title": midi_file,
+            "src": f"{base_url}song/{midi_file}",
+        }
+        for index, midi_file in enumerate(filtered_gallery_files)
+    ]
+
+    return result

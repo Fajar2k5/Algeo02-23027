@@ -33,11 +33,11 @@ function App() {
       </header>
 
       <main className="grid grid-cols-1 md:grid-cols-9 gap-3 mt-4 rounded-xl overflow-hidden">
-        <div className="hidden md:block md:col-span-2 rounded-l-xl">
+        <div className="hidden md:block md:col-span-2 rounded-l-xl h-full">
           {/* Pass the callback to Sidebar */}
           <Sidebar onUploadSuccess={handleUploadSuccess} />
         </div>
-        <div className="col-span-1 md:col-span-7 rounded-xl ml-6">
+        <div className="col-span-1 md:col-span-7 rounded-xl ml-6 h-full">
           {/* Pass the refresh trigger to Gallery */}
           <Gallery onSelectSong={handleSelectSong} refreshTrigger={refreshGallery} />
         </div>

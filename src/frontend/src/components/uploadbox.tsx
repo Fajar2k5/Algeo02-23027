@@ -4,7 +4,7 @@ import { useState } from "react";
 import axios from "axios";
 
 interface UploadSectionProps {
-  onUploadSuccess: () => void; 
+  onUploadSuccess: () => void;
 }
 
 const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
@@ -14,6 +14,8 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
   const [fileName, setFileName] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [datasetName, setDatasetName] = useState<string | null>(null);
+  const [mapperName, setMapperName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -30,17 +32,23 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
 
     if (e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
+      setError(null); // Reset error
 
       if (file.type === "application/x-zip-compressed") {
+        // If it's a ZIP file, update the dataset name
         setDatasetName(file.name);
         setSelectedFile(file);
-      } else {
+      } else if (file.type === "application/json") {
+        // If it's a JSON file, update the mapper name
+        setMapperName(file.name);
+        setSelectedFile(file);
+      } else if (file.type.startsWith("image/")) {
+        // For image files, set the file name and preview image
         setFileName(file.name);
         setSelectedFile(file);
-      }
-
-      if (activeTab === "Image") {
         previewImage(file);
+      } else {
+        setError("Unsupported file type");
       }
     }
   };
@@ -48,19 +56,20 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       const file = e.target.files[0];
-
-      console.log(file.type);
+      setError(null); // Reset error
 
       if (file.type === "application/x-zip-compressed") {
-        setDatasetName(file.name);
+        setDatasetName(file.name); // Update dataset name for ZIP file
         setSelectedFile(file);
-      } else {
-        setFileName(file.name);
+      } else if (file.type === "application/json") {
+        setMapperName(file.name); // Update mapper name for JSON file
         setSelectedFile(file);
-      }
-
-      if (activeTab === "Image") {
+      } else if (file.type.startsWith("image/")) {
+        setFileName(file.name); // Update file name for image files
+        setSelectedFile(file);
         previewImage(file);
+      } else {
+        setError("Unsupported file type");
       }
     }
   };
@@ -85,16 +94,13 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
 
       onUploadSuccess();
 
-      if (selectedFile.type !== "application/x-zip-compressed") {
-        if (!selectedFile.type.startsWith("image/")) {
-          setFileName(null);
-          setPreviewSrc(null);
-        }
-        setSelectedFile(null);
-      }
+      // Reset states after successful upload, except dataset and mapper names
+      setFileName(null);
+      setPreviewSrc(null);
+      setSelectedFile(null);
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("File upload failed!");
+      setError("File upload failed!");
     }
   };
 
@@ -110,12 +116,13 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
 
   const handleTabClick = (tab: string) => {
     setActiveTab((prevTab) => (prevTab === tab ? null : tab));
-    setPreviewSrc(null);
 
-    if (tab !== "Dataset") {
-      setFileName(null);
-      setSelectedFile(null);
-    }
+    // Reset only the file-specific states when switching tabs
+    setPreviewSrc(null);
+    setFileName(null);
+    setSelectedFile(null);
+
+    // Keep the dataset and mapper names as they are
   };
 
   const handleRemoveImage = () => {
@@ -126,14 +133,17 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
 
   return (
     <div className="flex flex-col items-center w-full max-w-sm mx-auto bg-[#121212] p-4 rounded-2xl">
-      <p className="text-white mb-2">
+      <p className="text-white mb-1 text-xs">
         {datasetName ? `Dataset: ${datasetName}` : "Dataset: -"}
       </p>
-
-      <p className="text-white mb-2">
+      <p className="text-white mb-1 text-xs">
         {fileName ? `Filename: ${fileName}` : "Filename: -"}
       </p>
-  
+      <p className="text-white mb-1 text-xs">
+        {mapperName ? `Mapper: ${mapperName}` : "Mapper: -"}
+      </p>
+
+      {error && <p className="text-red-500 text-xs">{error}</p>}
 
       <div className="flex justify-center space-x-1 mb-4">
         {["MIDI", "Image", "Mapper", "Dataset"].map((tab) => (
