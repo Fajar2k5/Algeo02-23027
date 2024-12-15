@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { act, useState } from "react";
 import UploadSection from "./uploadbox";
 import ikuyoImage from "../assets/ikuyokita.png";
+import axios from "axios";
 
 export interface Song {
   id: number;
@@ -14,11 +15,25 @@ export interface Song {
 interface SidebarProps {
   onUploadSuccess: () => void; // Callback to notify parent
   onSelectedSong: (song: Song) => void; // Callback to notify parent
+  activeTab: "Image" | "MIDI" | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess }) => {
+
+const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab }) => {
   const [previewSrc, setPreviewSrc] = useState<string | null>(ikuyoImage);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
+
+  const handleQuery = async () => {
+    if (activeTab === "Image") {
+      // const response = await axios.post("http://
+      console.log("Querying for image...");
+    } else if (activeTab === "MIDI") {
+      // const response = await axios.post("http://
+      console.log("Querying for MIDI...");
+    } else {
+      console.error("Invalid active tab:", activeTab);
+    }
+  };
 
   const handlePreviewChange = (src: string | null) => {
     setPreviewSrc(src || ikuyoImage);
@@ -47,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess }) => {
     <section className="bg-[#121212] rounded-xl h-full">
       <div className="flex flex-col h-full">
         <div className="p-4 flex justify-center items-center relative">
-          <div className="w-48 h-48 bg-[#1A1A1A] rounded-lg flex justify-center items-center overflow-hidden relative">
+          <div className="w-56 h-48 bg-[#1A1A1A] rounded-lg flex justify-center items-center overflow-hidden relative">
             {previewSrc ? (
               <>
                 {isMidiPreview ? (
@@ -103,8 +118,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess }) => {
 
         <div className="flex flex-col items-center">
           <button
-            className="w-32 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-xs transition-colors duration-200"
-            onClick={() => console.log("Query button clicked")}
+            className={`mt-4 w-32 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-xs transition-colors duration-200 ${
+              !activeTab || previewSrc == ikuyoImage ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            onClick={handleQuery}
+            disabled={previewSrc == ikuyoImage || activeTab === null}
           >
             Query
           </button>

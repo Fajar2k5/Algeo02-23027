@@ -132,17 +132,12 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess, onPrevie
 
   const handleTabClick = (tab: string) => {
     setActiveTab((prevTab) => (prevTab === tab ? null : tab));
-    // Reset local states when switching tabs
     setLocalPreviewSrc(null);
     setLocalFileName(null);
     setSelectedFile(null);
-    // setDatasetName(null);
-    // setMapperName(null);
-    // Don't call onPreviewChange or onFileNameChange here, we only reflect changes on upload.
   };
 
   const handleRemoveImage = () => {
-    // Remove local preview only. This does NOT affect sidebar.
     setLocalPreviewSrc(null);
     setLocalFileName(null);
     setSelectedFile(null);

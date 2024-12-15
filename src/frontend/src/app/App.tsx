@@ -23,9 +23,7 @@ function App() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Add your search logic here
     console.log('Search submitted:', searchQuery);
-    // Reset the search query after submission
     setSearchQuery('');
   };
 
@@ -73,7 +71,8 @@ function App() {
         <div className="hidden md:block md:col-span-2 rounded-l-xl h-full">
           <Sidebar 
             onUploadSuccess={handleUploadSuccess}
-            onSelectedSong={handleSelectSong} 
+            onSelectedSong={handleSelectSong}
+            activeTab={activeTab} 
           />
         </div>
         <div className="col-span-1 md:col-span-7 rounded-xl ml-6 h-full">
