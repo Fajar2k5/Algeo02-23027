@@ -4,16 +4,20 @@ import { useState } from "react";
 import axios from "axios";
 
 interface UploadSectionProps {
-  onUploadSuccess: () => void; 
+  onUploadSuccess: (uploadedUrl?: string) => void;
+  onPreviewChange: (src: string | null) => void;
+  onFileNameChange: (name: string | null) => void; 
 }
 
-const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
-  const [activeTab, setActiveTab] = useState<string | null>("MIDI");
+const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess, onPreviewChange, onFileNameChange }) => {
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [localPreviewSrc, setLocalPreviewSrc] = useState<string | null>(null); // Local preview only
+  const [localFileName, setLocalFileName] = useState<string | null>(null);     // Local filename only
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [datasetName, setDatasetName] = useState<string | null>(null);
+  const [mapperName, setMapperName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -27,41 +31,38 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-
     if (e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-
-      if (file.type === "application/x-zip-compressed") {
-        setDatasetName(file.name);
-        setSelectedFile(file);
-      } else {
-        setFileName(file.name);
-        setSelectedFile(file);
-      }
-
-      if (activeTab === "Image") {
-        previewImage(file);
-      }
+      setError(null);
+      handleFileSelection(file);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       const file = e.target.files[0];
+      setError(null);
+      handleFileSelection(file);
+    }
+  };
 
-      console.log(file.type);
+  const handleFileSelection = (file: File) => {
+    setSelectedFile(file);
 
-      if (file.type === "application/x-zip-compressed") {
-        setDatasetName(file.name);
-        setSelectedFile(file);
-      } else {
-        setFileName(file.name);
-        setSelectedFile(file);
-      }
-
-      if (activeTab === "Image") {
-        previewImage(file);
-      }
+    if (file.type === "application/x-zip-compressed") {
+      setLocalFileName(file.name);
+      // No preview for zip
+      setLocalPreviewSrc(null);
+    } else if (file.type === "application/json") {
+      setLocalFileName(file.name);
+      setLocalPreviewSrc(null);
+    } else if (file.type.startsWith("image/")) {
+      previewImage(file);
+    } else if (file.type === "audio/midi" || file.type === "audio/mid") {
+      setLocalFileName(file.name);
+      setLocalPreviewSrc(null);
+    } else {
+      setError("Unsupported file type");
     }
   };
 
@@ -82,19 +83,38 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
       });
       console.log("Upload success:", response.data);
       alert("File uploaded successfully!");
-
-      onUploadSuccess();
-
-      if (selectedFile.type !== "application/x-zip-compressed") {
-        if (!selectedFile.type.startsWith("image/")) {
-          setFileName(null);
-          setPreviewSrc(null);
-        }
-        setSelectedFile(null);
+      onUploadSuccess(response.data.url);
+      setLocalFileName(null);
+      setLocalPreviewSrc(null);
+      if (activeTab === "Image" && localPreviewSrc) {
+        onPreviewChange(localPreviewSrc); 
+        onFileNameChange(localFileName);
+      } else if (activeTab === "MIDI") {
+        // For MIDI, use a default placeholder icon after upload
+        onPreviewChange("/midi_placeholder.png");
+        onFileNameChange(localFileName);
+      }else if (activeTab === "Mapper") {
+        // For Mapper, use a default placeholder icon after upload
+        setMapperName(localFileName);
+        onPreviewChange(null);
+      }else if (activeTab === "Dataset") {
+        // For Dataset, use a default placeholder icon after upload
+        setDatasetName(localFileName);
+        onPreviewChange(null);
+      }else {
+        // For other file types, no preview in sidebar
+        onPreviewChange(null);
+        onFileNameChange(localFileName);
       }
+
+      // Reset local states after successful upload
+      setSelectedFile(null);
+      // Note: We do NOT call onPreviewChange(null) or onFileNameChange(null) here,
+      // because the sidebar should keep showing the uploaded file.
+
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("File upload failed!");
+      setError("File upload failed!");
     }
   };
 
@@ -102,7 +122,9 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setPreviewSrc(event.target?.result as string);
+        const src = event.target?.result as string;
+        setLocalPreviewSrc(src);
+        setLocalFileName(file.name);
       };
       reader.readAsDataURL(file);
     }
@@ -110,30 +132,45 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
 
   const handleTabClick = (tab: string) => {
     setActiveTab((prevTab) => (prevTab === tab ? null : tab));
-    setPreviewSrc(null);
-
-    if (tab !== "Dataset") {
-      setFileName(null);
-      setSelectedFile(null);
-    }
+    // Reset local states when switching tabs
+    setLocalPreviewSrc(null);
+    setLocalFileName(null);
+    setSelectedFile(null);
+    // setDatasetName(null);
+    // setMapperName(null);
+    // Don't call onPreviewChange or onFileNameChange here, we only reflect changes on upload.
   };
 
   const handleRemoveImage = () => {
-    setPreviewSrc(null);
-    setFileName(null);
+    // Remove local preview only. This does NOT affect sidebar.
+    setLocalPreviewSrc(null);
+    setLocalFileName(null);
     setSelectedFile(null);
   };
 
   return (
     <div className="flex flex-col items-center w-full max-w-sm mx-auto bg-[#121212] p-4 rounded-2xl">
-      <p className="text-white mb-2">
-        {datasetName ? `Dataset: ${datasetName}` : "Dataset: -"}
-      </p>
-
-      <p className="text-white mb-2">
-        {fileName ? `Filename: ${fileName}` : "Filename: -"}
-      </p>
-  
+      <div className="flex flex-row items-start mb-4 space-x-8">
+        <div className="flex flex-col items-center">
+          <p className="text-white text-xs mb-1">Dataset:</p>
+          <p className="text-white text-xs font-semibold overflow-hidden whitespace-nowrap text-ellipsis">
+            {datasetName || '-'}
+          </p>
+        </div>
+        <div className="flex flex-col items-center">
+          <p className="text-white text-xs mb-1">Filename:</p>
+          <p className="text-white text-xs font-semibold overflow-hidden whitespace-nowrap text-ellipsis">
+            {localFileName || '-'}
+          </p>
+        </div>
+        <div className="flex flex-col items-center">
+          <p className="text-white text-xs mb-1">Mapper:</p>
+          <p className="text-white text-xs font-semibold overflow-hidden whitespace-nowrap text-ellipsis">
+            {mapperName || '-'}
+          </p>
+        </div>
+      </div>
+      {error && <p className="text-red-500 text-xs">{error}</p>}
 
       <div className="flex justify-center space-x-1 mb-4">
         {["MIDI", "Image", "Mapper", "Dataset"].map((tab) => (
@@ -155,14 +192,14 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`w-48 aspect-square rounded-lg bg-[#1A1A1A] border border-zinc-800 flex items-center justify-center transition-colors duration-200 ${
+        className={`w-64 h-16 rounded-lg bg-[#1A1A1A] border border-zinc-800 flex items-center justify-center transition-colors duration-200 ${
           isDragging ? "border-zinc-700 bg-zinc-800/50" : ""
         }`}
       >
-        {activeTab === "Image" && previewSrc ? (
+        {activeTab === "Image" && localPreviewSrc ? (
           <div className="relative w-full h-full">
             <img
-              src={previewSrc}
+              src={localPreviewSrc}
               alt="Preview"
               className="w-full h-full object-cover rounded-lg"
             />
@@ -173,7 +210,7 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
               Remove
             </button>
           </div>
-        ) : (
+        ) : activeTab ? (
           <>
             <input
               type="file"
@@ -196,11 +233,13 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
               htmlFor="file-upload"
               className="cursor-pointer text-zinc-500 text-xs text-center px-2"
             >
-              {activeTab
-                ? `Drop your ${activeTab.toLowerCase()} file here or click to upload`
-                : "Select a file type above"}
+              {`Drop your ${activeTab.toLowerCase()} file here or click to upload`}
             </label>
           </>
+        ) : (
+          <p className="text-zinc-500 text-xs text-center px-2">
+            Select a file type above
+          </p>
         )}
       </div>
 

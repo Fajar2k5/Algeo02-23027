@@ -6,16 +6,22 @@ export interface Song {
   id: number;
   cover: string | null;
   title: string;
-  src: string; // Include the audio file path for the song
+  src: string; 
 }
 
 interface GalleryProps {
-  onSelectSong: (song: Song) => void; // Callback to notify parent
-  refreshTrigger: number; // Trigger to refresh gallery
+  onSelectSong: (song: Song) => void;
+  refreshTrigger: number;
+  activeTab: "Image" | "MIDI" | null;
+  setActiveTab: React.Dispatch<React.SetStateAction<"Image" | "MIDI" | null>>;
 }
 
-const Gallery: React.FC<GalleryProps> = ({ onSelectSong, refreshTrigger }) => {
-  const [activeTab, setActiveTab] = useState<"Image" | "MIDI">("Image");
+const Gallery: React.FC<GalleryProps> = ({
+  onSelectSong,
+  refreshTrigger,
+  activeTab,
+  setActiveTab,
+}) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,11 +37,9 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong, refreshTrigger }) => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(
-          `http://127.0.0.1:8000/gallery/${activeTab}`
-        );
+        const response = await axios.get(`http://127.0.0.1:8000/gallery/`);
         setSongs(response.data);
-        setCurrentPage(1); // Reset to first page on new data
+        setCurrentPage(1); 
       } catch (error) {
         console.error("Error fetching gallery data:", error);
         setSongs([]);
@@ -45,7 +49,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong, refreshTrigger }) => {
     };
 
     fetchData();
-  }, [activeTab, refreshTrigger]); // Added refreshTrigger to dependencies
+  }, [refreshTrigger]);
 
   const nextPage = () => {
     if (currentPage < totalPages) {
@@ -59,13 +63,19 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong, refreshTrigger }) => {
     }
   };
 
+  const handleTabClick = (tab: "Image" | "MIDI") => {
+    setActiveTab((prevTab: "Image" | "MIDI" | null) => (prevTab === tab ? null : tab));
+  };
+  
+  
+
   return (
-    <div className="bg-[#121212] rounded-xl p-4 h-[550px] flex flex-col">
+    <div className="bg-[#121212] rounded-xl p-4 h-[570px] flex flex-col">
       <div className="flex justify-center space-x-4 mb-4">
         {["Image", "MIDI"].map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as "Image" | "MIDI")}
+            onClick={() => handleTabClick(tab as "Image" | "MIDI")}
             className={`px-4 py-2 rounded-lg text-sm ${
               activeTab === tab
                 ? "bg-white text-black"
@@ -82,14 +92,14 @@ const Gallery: React.FC<GalleryProps> = ({ onSelectSong, refreshTrigger }) => {
           {isLoading ? (
             <div className="text-zinc-400">Loading...</div>
           ) : songs.length === 0 ? (
-            <div className="text-zinc-400">No {activeTab}s found</div>
+            <div className="text-zinc-400">No songs found</div>
           ) : (
             <div className="grid grid-cols-4 grid-rows-3 gap-3">
               {currentItems.map((song) => (
                 <div
                   key={song.id}
                   className="bg-[#1A1A1A] p-1 rounded-lg hover:scale-105 transition-transform flex flex-col items-center w-48 cursor-pointer"
-                  onClick={() => onSelectSong(song)} 
+                  onClick={() => onSelectSong(song)}
                 >
                   <img
                     src={song.cover || placeholder}
