@@ -44,7 +44,7 @@ function App() {
       // Send the search query, even if it's empty
       const response = await fetch(`http://127.0.0.1:8000/gallery?search=${searchQuery}`);
       const data = await response.json();
-      setGalleryData(data); // Update gallery with fetched results
+      setGalleryData(data);
     } catch (error) {
       console.error("Error fetching gallery data:", error);
     }

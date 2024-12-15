@@ -12,14 +12,14 @@ interface GalleryProps {
   onSelectSong: (song: Song) => void;
   activeTab: "Image" | "MIDI" | null;
   setActiveTab: React.Dispatch<React.SetStateAction<"Image" | "MIDI" | null>>;
-  galleryData: Song[]; // Use galleryData prop
+  galleryData: Song[]; 
 }
 
 const Gallery: React.FC<GalleryProps> = ({
   onSelectSong,
   activeTab,
   setActiveTab,
-  galleryData, // Receive gallery data as a prop
+  galleryData, 
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true); // Maintain isLoading state
@@ -31,7 +31,6 @@ const Gallery: React.FC<GalleryProps> = ({
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = galleryData.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Simulate loading whenever galleryData changes
   useEffect(() => {
     setIsLoading(true);
     const timeout = setTimeout(() => {
@@ -55,6 +54,10 @@ const Gallery: React.FC<GalleryProps> = ({
   const handleTabClick = (tab: "Image" | "MIDI") => {
     setActiveTab((prevTab: "Image" | "MIDI" | null) => (prevTab === tab ? null : tab));
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [galleryData]);
 
   return (
     <div className="bg-[#121212] rounded-xl p-4 h-[570px] flex flex-col">
