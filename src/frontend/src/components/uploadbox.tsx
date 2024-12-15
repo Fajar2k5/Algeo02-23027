@@ -133,16 +133,20 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
 
   return (
     <div className="flex flex-col items-center w-full max-w-sm mx-auto bg-[#121212] p-4 rounded-2xl">
-      <p className="text-white mb-1 text-xs">
-        {datasetName ? `Dataset: ${datasetName}` : "Dataset: -"}
-      </p>
-      <p className="text-white mb-1 text-xs">
-        {fileName ? `Filename: ${fileName}` : "Filename: -"}
-      </p>
-      <p className="text-white mb-1 text-xs">
-        {mapperName ? `Mapper: ${mapperName}` : "Mapper: -"}
-      </p>
-
+      <div className="flex flex-row items-start mb-4 space-x-8">
+        <div className="flex flex-col items-center">
+          <p className="text-white text-xs mb-1">Dataset:</p>
+          <p className="text-white text-xs font-semibold">{datasetName || '-'}</p>
+        </div>
+        <div className="flex flex-col items-center">
+          <p className="text-white text-xs mb-1">Filename:</p>
+          <p className="text-white text-xs font-semibold">{fileName || '-'}</p>
+        </div>
+        <div className="flex flex-col items-center">
+          <p className="text-white text-xs mb-1">Mapper:</p>
+          <p className="text-white text-xs font-semibold">{mapperName || '-'}</p>
+        </div>
+      </div>
       {error && <p className="text-red-500 text-xs">{error}</p>}
 
       <div className="flex justify-center space-x-1 mb-4">
