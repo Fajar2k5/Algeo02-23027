@@ -1,55 +1,44 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface Song {
   id: number;
   cover: string | null;
   title: string;
-  src: string; 
+  src: string;
 }
 
 interface GalleryProps {
   onSelectSong: (song: Song) => void;
-  refreshTrigger: number;
   activeTab: "Image" | "MIDI" | null;
   setActiveTab: React.Dispatch<React.SetStateAction<"Image" | "MIDI" | null>>;
+  galleryData: Song[]; // Use galleryData prop
 }
 
 const Gallery: React.FC<GalleryProps> = ({
   onSelectSong,
-  refreshTrigger,
   activeTab,
   setActiveTab,
+  galleryData, // Receive gallery data as a prop
 }) => {
-  const [songs, setSongs] = useState<Song[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const placeholder = "https://via.placeholder.com/100";
+  const [isLoading, setIsLoading] = useState(true); // Maintain isLoading state
 
+  const placeholder = "https://via.placeholder.com/100";
   const itemsPerPage = 12;
-  const totalPages = Math.max(1, Math.ceil(songs.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(galleryData.length / itemsPerPage));
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = songs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = galleryData.slice(indexOfFirstItem, indexOfLastItem);
 
+  // Simulate loading whenever galleryData changes
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const response = await axios.get(`http://127.0.0.1:8000/gallery/`);
-        setSongs(response.data);
-        setCurrentPage(1); 
-      } catch (error) {
-        console.error("Error fetching gallery data:", error);
-        setSongs([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [refreshTrigger]);
+    setIsLoading(true);
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 300); // Simulate a small delay for loading
+    return () => clearTimeout(timeout);
+  }, [galleryData]);
 
   const nextPage = () => {
     if (currentPage < totalPages) {
@@ -66,8 +55,6 @@ const Gallery: React.FC<GalleryProps> = ({
   const handleTabClick = (tab: "Image" | "MIDI") => {
     setActiveTab((prevTab: "Image" | "MIDI" | null) => (prevTab === tab ? null : tab));
   };
-  
-  
 
   return (
     <div className="bg-[#121212] rounded-xl p-4 h-[570px] flex flex-col">
@@ -91,23 +78,23 @@ const Gallery: React.FC<GalleryProps> = ({
         <div className="flex justify-center items-start pt-2">
           {isLoading ? (
             <div className="text-zinc-400">Loading...</div>
-          ) : songs.length === 0 ? (
+          ) : galleryData.length === 0 ? (
             <div className="text-zinc-400">No songs found</div>
           ) : (
             <div className="grid grid-cols-4 grid-rows-3 gap-3">
-              {currentItems.map((song) => (
+              {currentItems.map((item) => (
                 <div
-                  key={song.id}
+                  key={item.id}
                   className="bg-[#1A1A1A] p-1 rounded-lg hover:scale-105 transition-transform flex flex-col items-center w-48 cursor-pointer"
-                  onClick={() => onSelectSong(song)}
+                  onClick={() => onSelectSong(item)}
                 >
                   <img
-                    src={song.cover || placeholder}
-                    alt={song.title}
+                    src={item.cover || placeholder}
+                    alt={item.title}
                     className="w-full h-24 object-cover rounded-md"
                   />
                   <div className="mt-1 text-white text-center">
-                    <h3 className="text-xs font-medium truncate w-full">{song.title}</h3>
+                    <h3 className="text-xs font-medium truncate w-full">{item.title}</h3>
                   </div>
                 </div>
               ))}
@@ -115,7 +102,7 @@ const Gallery: React.FC<GalleryProps> = ({
           )}
         </div>
 
-        {!isLoading && songs.length > 0 && (
+        {!isLoading && galleryData.length > 0 && (
           <div className="flex justify-center items-center gap-4 mt-4">
             <button
               onClick={prevPage}
@@ -130,7 +117,7 @@ const Gallery: React.FC<GalleryProps> = ({
             </button>
 
             <span className="text-zinc-400 text-sm">
-              {songs.length > 0 ? currentPage : 0} of {songs.length > 0 ? totalPages : 0}
+              {galleryData.length > 0 ? currentPage : 0} of {galleryData.length > 0 ? totalPages : 0}
             </span>
 
             <button

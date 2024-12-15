@@ -145,48 +145,52 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 @app.get("/gallery/")
-async def get_gallery(request: Request):
+async def get_gallery(request: Request, search: str = ""):
     global current_dataset
 
-    # Handle the case where no dataset has been uploaded or is not available
+    # Return empty list if no dataset is active
     if not current_dataset or not os.path.exists(current_dataset):
-        return []  # Return an empty list to indicate no gallery items
+        return []
 
-    # Directories for album and song based on the current dataset
     album_dir = Path(os.path.join(current_dataset, "album"))
     song_dir = Path(os.path.join(current_dataset, "song"))
 
-    # Ensure album and song subdirectories exist
     if not album_dir.exists() or not song_dir.exists():
-        return []  # Return an empty list if subdirectories are missing
+        return []
 
     base_url = str(request.base_url)
 
-    # Load audio-to-pic mapping from JSON if available
+    # Load audio-to-pic mapping from JSON
     audio_to_pic = {}
     if newest_json_path:
         try:
-            with open(newest_json_path, 'r') as f:
+            with open(newest_json_path, "r") as f:
                 json_data = json.load(f)
                 audio_to_pic = {entry["audio_file"]: entry["pic_name"] for entry in json_data}
         except Exception:
-            pass  # If JSON fails to load, proceed without mappings
+            pass
 
-    # Gather MIDI files from the song directory
+    # Gather all MIDI files
     gallery_files = [file.name for file in song_dir.glob("*.mid") if file.is_file()]
 
-    # Filter gallery files to include only those with associated pictures
+    # Filter gallery files only if the search query is not empty
+    if search.strip():
+        gallery_files = [file for file in gallery_files if search.lower() in file.lower()]
+
+    # Filter files with associated pictures
     filtered_gallery_files = [file for file in gallery_files if file in audio_to_pic]
 
-    # Build the result for the gallery
     result = [
         {
             "id": index + 1,
-            "cover": f"{base_url}{current_dataset}/album/{audio_to_pic.get(midi_file, '').split('.')[0]}.jpg" if audio_to_pic.get(midi_file) else None,
+            "cover": f"{base_url}datasets/{os.path.basename(current_dataset)}/album/{audio_to_pic.get(midi_file, '').split('.')[0]}.jpg"
+            if audio_to_pic.get(midi_file)
+            else None,
             "title": midi_file,
-            "src": f"{base_url}{current_dataset}/song/{midi_file}",
+            "src": f"{base_url}datasets/{os.path.basename(current_dataset)}/song/{midi_file}",
         }
         for index, midi_file in enumerate(filtered_gallery_files)
     ]
 
     return result
+
