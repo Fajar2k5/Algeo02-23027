@@ -46,3 +46,14 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
+
+midi-player::part(control-panel) {
+  color: white;
+  background: black;
+  border-radius: 0px;
+  width: 70vw;
+}
+
+midi-player::part(play-button) {
+  background: white;
+}
