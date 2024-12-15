@@ -115,7 +115,7 @@ const VoiceCaptureButton = () => {
     <div>
       <button
         onClick={showDialog}
-        className="bg-zinc-900 hover:opacity-80 text-white font-bold p-2 rounded-full"
+        className="bg-zinc-800 hover:opacity-80 text-white font-bold p-2 rounded-full hover:bg-zinc-600"
         type="button"
       >
         <Mic className="w-5 h-5" />

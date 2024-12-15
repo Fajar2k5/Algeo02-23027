@@ -64,7 +64,7 @@ const Gallery: React.FC<GalleryProps> = ({
     <div className="bg-[#121212] rounded-xl p-4 h-[570px] flex flex-col">
       <div className="relative mb-4">
       {/* VoiceCaptureButton aligned to the left */}
-      <div className="absolute left-0">
+      <div className="absolute left-1">
         <VoiceCaptureButton />
       </div>
 
