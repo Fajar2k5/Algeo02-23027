@@ -3,13 +3,27 @@ import { useState, useEffect, useRef } from "react";
 import { Mic } from "lucide-react";
 import axios from "axios";
 
-function VoiceCaptureButton(): JSX.Element {
+export interface Song {
+  id: number;
+  cover: string | null;
+  title: string;
+  src: string;
+  similarity_score?: number;
+}
+
+interface VoiceCaptureButtonProps {
+  onQueryResult: (data: Song[]) => void;
+}
+
+function VoiceCaptureButton({
+  onQueryResult,
+}: VoiceCaptureButtonProps): JSX.Element {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [recordingTime, setRecordingTime] = useState<number>(0);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [volume, setVolume] = useState<number>(0); // Added state for volume
+  const [volume, setVolume] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -65,7 +79,14 @@ function VoiceCaptureButton(): JSX.Element {
           "Content-Type": "multipart/form-data",
         },
       });
-      console.log("Audio uploaded successfully:", response.data);
+      const { result, time_taken } = response.data;
+
+      // Pass the result to the onQueryResult callback
+      if (result && Array.isArray(result)) {
+        onQueryResult(result);
+      }
+
+      alert(`Humming query success! Time taken: ${time_taken} seconds`);
     } catch (error) {
       console.error("Error sending audio to backend:", error);
     }
@@ -97,7 +118,7 @@ function VoiceCaptureButton(): JSX.Element {
     const average = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length;
     const normalizedVolume = Math.pow(average / 128, 0.5) * 2;
 
-    setVolume(normalizedVolume); // Update volume state
+    setVolume(normalizedVolume);
 
     if (normalizedVolume < SILENCE_THRESHOLD) {
       if (!silenceTimerRef.current) {
@@ -184,7 +205,7 @@ function VoiceCaptureButton(): JSX.Element {
               <div 
                 className="absolute inset-0 bg-zinc-500 rounded-full transition-transform duration-75 opacity-25"
                 style={{
-                  transform: `scale(${1 + volume})`, // Use the volume state
+                  transform: `scale(${1 + volume})`,
                 }}
               />
               <div className="absolute inset-0 flex items-center justify-center">

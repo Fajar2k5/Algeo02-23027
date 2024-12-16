@@ -61,11 +61,15 @@ const Gallery: React.FC<GalleryProps> = ({
     setCurrentPage(1);
   }, [galleryData]);
 
+  const handleQueryResult = (data: Song[]) => {
+    galleryData = data;
+  }
+
   return (
     <div className="bg-[#121212] rounded-xl p-4 h-[600px] flex flex-col">
       <div className="relative mb-4">
       <div className="absolute left-1">
-        <VoiceCaptureButton />
+        <VoiceCaptureButton onQueryResult={handleQueryResult}/>
       </div>
 
       <div className="flex justify-center space-x-4">
