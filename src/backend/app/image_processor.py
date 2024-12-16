@@ -100,6 +100,14 @@ def initialize_dataset_concurrently(directory):
     eigenvectors, projected_dataset = perform_truncated_svd(standardized_dataset, N_COMPONENTS)
     return eigenvectors, projected_dataset, mean_dataset
 
+def get_similarities(similarities, sorted_indices, threshold = 0.7):
+    """Get similar images based on threshold."""
+    similar_images = []
+    for i in range(len(sorted_indices)):
+        if similarities[sorted_indices[i]] > threshold:
+            similar_images.append((image_names[sorted_indices[i]], similarities[sorted_indices[i]]))
+    return similar_images
+
 # Main Execution
 if __name__ == "__main__":
     start_time = time.time()
@@ -110,12 +118,8 @@ if __name__ == "__main__":
     query_image_path = "65.png"
     similarities, sorted_indices = query_image(query_image_path, eigenvectors, projected_dataset, mean_dataset)
 
-    if similarities is not None:
-        result = [
-            (image_names[sorted_indices[i]], similarities[sorted_indices[i]])
-            for i in range(min(20, len(sorted_indices)))
-        ]
-        print(result)
+    result = get_similarities(similarities, sorted_indices)
+    print(result)
 
     end_time = time.time()
     print(f"Query completed in {end_time - start_time:.2f} seconds")
