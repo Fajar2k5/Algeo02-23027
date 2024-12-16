@@ -11,10 +11,26 @@ import functools
 def get_midi_notes(file_path):
     midi_data = mido.MidiFile(file_path)
     notes = []
+    dict = {}
+
     for track in midi_data.tracks:
         for msg in track:
+            if msg.type == 'note_on' and msg.velocity > 0:
+                if msg.channel in dict:
+                    dict[msg.channel] += 1
+                else:
+                    dict[msg.channel] = 1
+
             if msg.type == 'note_on' and msg.velocity > 0 and (msg.channel == 0 or msg.channel == 3):
                 notes.append(msg.note)
+    
+    if notes == []:
+        max_channel = max(dict, key=dict.get)
+        for track in midi_data.tracks:
+            for msg in track:
+                if msg.type == 'note_on' and msg.velocity > 0 and msg.channel == max_channel:
+                    notes.append(msg.note)
+
     return notes
 
 def shrink_atb_histogram(hist):
@@ -64,8 +80,10 @@ def get_feature(notes, window_size=40, step=20):
     for i in range(0, len(notes), step):
         start = i
         end = start + window_size - 1
-        if end >= len(notes):
+        
+        if start >= len(notes):
             break
+
         current_windows = notes[start:end + 1]
         atb_hist = np.zeros(128, dtype=float)
         unique, counts = np.unique(current_windows, return_counts=True)
@@ -144,7 +162,7 @@ def compute_similarity_for_feature(feature, queries):
     # Since we already have arrays, no change needed here.
     for i in range(len(feature_ATB)):
         # Random sampling from query
-        max_idx = min(len(query_ATB), 10)
+        max_idx = min(len(query_ATB), 15)
         for _ in range(max_idx):
             idx = random.randint(0, len(query_ATB) - 1)
             ATB_similarity = cosine_similarity(feature_ATB[i], query_ATB[idx])
@@ -173,7 +191,7 @@ def compare(features, queries):
     sorted_results = np.sort(sorted_results, order='similarity_score')[::-1]
     return sorted_results
 
-def get_similarities(sorted_results, threshold=0.55):
+def get_similarities(sorted_results, threshold=0):
     res = []
     for song_name, similarity_score in sorted_results:
         if similarity_score >= threshold:
@@ -181,31 +199,31 @@ def get_similarities(sorted_results, threshold=0.55):
 
     return res
 
-# if __name__ == "__main__":
-#     start_time = time.time()
+if __name__ == "__main__":
+    start_time = time.time()
 
-#     # Directory containing MIDI files
-#     directory_path = "temp_data/"
+    # Directory containing MIDI files
+    directory_path = "temp_data/"
 
-#     # Process MIDI files concurrently
-#     preprocess_result = process_all_midi_files_concurrently(directory_path)
+    # Process MIDI files concurrently
+    preprocess_result = process_all_midi_files_concurrently(directory_path)
 
-#     print("Database processed successfully.")
-#     print(f"Pre process finished within {time.time() - start_time:.2f} seconds")
-#     mid_time = time.time()
+    print("Database processed successfully.")
+    print(f"Pre process finished within {time.time() - start_time:.2f} seconds")
+    mid_time = time.time()
 
-#     # Extract features for the query MIDI file
-#     query_notes = get_midi_notes("temp_data/edited_fmttm.mid")
-#     queries = get_feature(query_notes)
+    # Extract features for the query MIDI file
+    query_notes = get_midi_notes("temp_data/anjay/Dataset MIDI 15/vivalavida.mid")
+    queries = get_feature(query_notes)
 
-#     # Compare similarity in parallel and get sorted results (as numpy array)
-#     sorted_similarity = compare(preprocess_result, queries)
-#     result = get_similarities(sorted_similarity)
+    # Compare similarity in parallel and get sorted results (as numpy array)
+    sorted_similarity = compare(preprocess_result, queries)
+    result = get_similarities(sorted_similarity)
 
-#     print("\nResults:")
-#     for song_name, similarity_score in result:
-#         print(f"{song_name}: {similarity_score:.4f}")
+    print("\nResults:")
+    for song_name, similarity_score in result:
+        print(f"{song_name}: {similarity_score:.4f}")
 
-#     end_time = time.time()
-#     print(f"\nQuery finished within {end_time - mid_time:.2f} seconds")
-#     print(f"\nTotal processing time: {end_time - start_time:.2f} seconds")
+    end_time = time.time()
+    print(f"\nQuery finished within {end_time - mid_time:.2f} seconds")
+    print(f"\nTotal processing time: {end_time - start_time:.2f} seconds")

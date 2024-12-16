@@ -111,7 +111,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab, onQueryRes
                     className="cursor-pointer relative w-full h-full"
                   >
                     <img
-                      src={previewSrc || placeHolder}
+                      src={placeHolder}
                       alt="MIDI Placeholder"
                       className="w-full h-full object-cover"
                     />

@@ -33,6 +33,11 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ selectedSong }) => {
   const lastSeekTime = useRef<number>(0);
   const seekDebounceTimeout = useRef<number | null>(null);
 
+  const isAudioFile = (fileName: string) => {
+    const audioExtensions = ['.mp3', '.wav', '.midi', '.mid'];
+    return audioExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+  };
+
   // Initialize
   useEffect(() => {
     gainNode.current = new Tone.Gain(1).toDestination();
@@ -371,85 +376,91 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ selectedSong }) => {
           {selectedSong ? (
             <>
               <img
-          src={selectedSong.cover || "/default-cover.jpg"}
-          alt="Album Cover"
-          className="w-12 h-12 rounded-lg"
+                src={selectedSong.cover || "/default-cover.jpg"}
+                alt="Album Cover"
+                className="w-12 h-12 rounded-lg"
               />
               <div>
-          <p className="text-sm font-bold">{selectedSong.title}</p>
-          {midiData && (
-            <p className="text-xs text-gray-400">
-              {midiData.tracks.length} tracks loaded
-            </p>
-          )}
+                <p className="text-sm font-bold">{selectedSong.title}</p>
+                {midiData && isAudioFile(selectedSong.src) && (
+                  <p className="text-xs text-gray-400">
+                    {midiData.tracks.length} tracks loaded
+                  </p>
+                )}
               </div>
             </>
           ) : (
             <>
               <div className="w-12 h-12 rounded-lg bg-gray-800 animate-pulse" />
               <div>No song selected
-          <div className="h-2 w-32" />
-          <div className="h-4 w-24 bg-gray-800 rounded animate-pulse" />
+                <div className="h-2 w-32" />
+                <div className="h-4 w-24 bg-gray-800 rounded animate-pulse" />
               </div>
             </>
           )}
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Volume2 className="w-4 h-4" />
-            <div 
-              className="relative flex items-center"
-              onMouseEnter={() => setIsHoveringVolume(true)}
-              onMouseLeave={() => setIsHoveringVolume(false)}
-            >
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={handleVolumeChange}
-                style={getVolumeSliderStyle()}
-                className="w-24 h-1 rounded-lg appearance-none cursor-pointer bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-              />
+        {selectedSong && isAudioFile(selectedSong.src) ? (
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Volume2 className="w-4 h-4" />
+              <div 
+                className="relative flex items-center"
+                onMouseEnter={() => setIsHoveringVolume(true)}
+                onMouseLeave={() => setIsHoveringVolume(false)}
+              >
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  style={getVolumeSliderStyle()}
+                  className="w-24 h-1 rounded-lg appearance-none cursor-pointer bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                />
+              </div>
             </div>
+            <button 
+              onClick={playPauseHandler} 
+              className="p-2 rounded-full hover:bg-white transition-colors"
+            >
+              {isPlaying ? (
+                <Pause className="w-4 h-4 text-white hover:text-black" />
+              ) : (
+                <Play className="w-4 h-4 text-white hover:text-black" />
+              )}
+            </button>
           </div>
-          <button 
-            onClick={playPauseHandler} 
-            className="p-2 rounded-full hover:bg-white transition-colors"
-          >
-            {isPlaying ? (
-              <Pause className="w-4 h-4 text-white hover:text-black" />
-            ) : (
-              <Play className="w-4 h-4 text-white hover:text-black" />
-            )}
-          </button>
-        </div>
+        ) : (
+          <div className="text-gray-500">Audio player disabled for non-audio files</div>
+        )}
       </div>
 
-      <div className="flex items-center space-x-2"
-        onMouseEnter={() => setIsHoveringProgress(true)}
-        onMouseLeave={() => setIsHoveringProgress(false)}
-      >
-        <span className="text-xs text-gray-400 w-12">
-          {formatTime(currentTime)}
-        </span>
-        <input
-          type="range"
-          min="0"
-          max={duration.current}
-          step="0.01"
-          value={currentTime}
-          onChange={handleProgressChange}
-          onMouseDown={handleProgressMouseDown}
-          onMouseUp={handleProgressMouseUp}
-          style={getProgressSliderStyle()}
-          className="flex-grow h-1 rounded-lg appearance-none cursor-pointer bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-        />
-        <span className="text-xs text-gray-400 w-12">
-          {formatTime(duration.current)}
-        </span>
-      </div>
+      {selectedSong && isAudioFile(selectedSong.src) && (
+        <div className="flex items-center space-x-2"
+          onMouseEnter={() => setIsHoveringProgress(true)}
+          onMouseLeave={() => setIsHoveringProgress(false)}
+        >
+          <span className="text-xs text-gray-400 w-12">
+            {formatTime(currentTime)}
+          </span>
+          <input
+            type="range"
+            min="0"
+            max={duration.current}
+            step="0.01"
+            value={currentTime}
+            onChange={handleProgressChange}
+            onMouseDown={handleProgressMouseDown}
+            onMouseUp={handleProgressMouseUp}
+            style={getProgressSliderStyle()}
+            className="flex-grow h-1 rounded-lg appearance-none cursor-pointer bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+          />
+          <span className="text-xs text-gray-400 w-12">
+            {formatTime(duration.current)}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

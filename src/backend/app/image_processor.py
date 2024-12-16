@@ -68,6 +68,14 @@ def process_query_image(image_path):
     """Process a query image (resize and flatten)."""
     return process_image(image_path)
 
+
+def euclidean_distance(vector1, vector2):
+    v1 = np.array(vector1)
+    v2 = np.array(vector2)
+
+    distance = np.linalg.norm(v1 - v2)
+    return distance
+
 def cosine_similarity(vec1, vec2):
     """Calculate cosine similarity between two vectors."""
     norm1 = np.linalg.norm(vec1)
