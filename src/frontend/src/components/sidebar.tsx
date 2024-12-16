@@ -28,9 +28,24 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab, onQueryRes
   const [queryTime, setQueryTime] = useState<number | null>(null);
   
   const handleQuery = async () => {
-    if (activeTab === "Image") {
-      // const response = await axios.post("http://
-      console.log("Querying for image...");
+    if (activeTab === "Image" && queryFile !== null) {
+      try {
+        const formData = new FormData();
+        formData.append("file", queryFile);
+
+        const response = await axios.post("http://127.0.0.1:8000/image-query/", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        const { result, time_taken } = response.data;
+        alert("Image query success!");
+        onQueryResult(result);
+        setQueryTime(time_taken);
+      } catch (error) {
+        console.error("Error querying image:", error);
+        setQueryTime(null);
+      }
     } else if (activeTab === "MIDI" && queryFile !== null) {
       try {
         const formData = new FormData();
