@@ -97,7 +97,8 @@ def initialize_dataset_concurrently(directory):
     """Initialize the dataset with concurrent processing."""
     processed_dataset = process_dataset_concurrently(directory)
     standardized_dataset, mean_dataset = standardize_dataset(processed_dataset)
-    eigenvectors, projected_dataset = perform_truncated_svd(standardized_dataset, N_COMPONENTS)
+    eigenvectors, projected_dataset = perform_truncated_svd(
+        standardized_dataset, min(N_COMPONENTS, len(processed_dataset) - 1))
     return eigenvectors, projected_dataset, mean_dataset
 
 def get_similarities(similarities, sorted_indices, threshold = 0.7):
@@ -112,7 +113,7 @@ def get_similarities(similarities, sorted_indices, threshold = 0.7):
 if __name__ == "__main__":
     start_time = time.time()
 
-    dataset_directory = "data_image"
+    dataset_directory = "data_image_small"
     eigenvectors, projected_dataset, mean_dataset = initialize_dataset_concurrently(dataset_directory)
 
     query_image_path = "65.png"
