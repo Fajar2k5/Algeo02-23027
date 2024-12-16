@@ -6,7 +6,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-import midi_processor
+import midi_processor,image_processor
 import time
 
 app = FastAPI()
@@ -20,6 +20,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+mean_dataset = None
+projected_dataset = None
+eigenvectors = None
 newest_json_path = None
 current_dataset = None
 result = []
@@ -48,7 +51,7 @@ async def reset_dataset():
 
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
-    global current_dataset, newest_json_path,preprocess_result
+    global current_dataset, newest_json_path,preprocess_result,eigenvectors,projected_dataset,mean_dataset
     file_type = file.content_type
 
     if file_type not in [
@@ -88,14 +91,12 @@ async def upload_file(file: UploadFile = File(...)):
         shutil.rmtree(dataset_path)
         
 
-    # Create dataset directories
     os.makedirs(dataset_path, exist_ok=True)
     song_directory = os.path.join(dataset_path, "song")
     album_directory = os.path.join(dataset_path, "album")
     os.makedirs(song_directory, exist_ok=True)
     os.makedirs(album_directory, exist_ok=True)
 
-    # Extract ZIP file
     temp_directory = f"temp_{file.filename}_extracted"
     os.makedirs(temp_directory, exist_ok=True)
 
@@ -125,6 +126,7 @@ async def upload_file(file: UploadFile = File(...)):
 
     current_dataset = dataset_path
     preprocess_result = midi_processor.process_all_midi_files_concurrently(song_directory)
+    eigenvectors,projected_dataset,mean_dataset = image_processor.initialize_dataset_concurrently(current_dataset)
 
     app.mount(f"/datasets/{dataset_name}/album", StaticFiles(directory=album_directory), name=f"{dataset_name}_album")
     app.mount(f"/datasets/{dataset_name}/song", StaticFiles(directory=song_directory), name=f"{dataset_name}_song")
@@ -160,16 +162,22 @@ async def get_gallery(request: Request, search: str = ""):
         except Exception:
             pass
 
+    gallery_images = [file.name for file in album_dir.glob("*.jpg") if file.is_file()]
+    gallery_images += [file.name for file in album_dir.glob("*.jpeg") if file.is_file()]
+    gallery_images += [file.name for file in album_dir.glob("*.png") if file.is_file()]
+
     gallery_files = [file.name for file in song_dir.glob("*.mid") if file.is_file()]
+
+    mapped_images = set(audio_to_pic.values())  
+    unmapped_images = [img for img in gallery_images if img not in mapped_images]
 
     if search.strip():
         gallery_files = [file for file in gallery_files if search.lower() in file.lower()]
+        unmapped_images = [img for img in unmapped_images if search.lower() in img.lower()]
 
-    # filtered_gallery_files = [file for file in gallery_files if file in audio_to_pic]
+    result = []
 
-    global result
-
-    result = [
+    result += [
         {
             "id": index + 1,
             "cover": f"{base_url}datasets/{os.path.basename(current_dataset)}/album/{audio_to_pic.get(midi_file, '').split('.')[0]}.jpg"
@@ -181,7 +189,19 @@ async def get_gallery(request: Request, search: str = ""):
         for index, midi_file in enumerate(gallery_files)
     ]
 
+    result += [
+        {
+            "id": len(result) + index + 1,
+            "cover": f"{base_url}datasets/{os.path.basename(current_dataset)}/album/{img}",
+            "title": img,
+            "src": None,  
+        }
+        for index, img in enumerate(unmapped_images)
+    ]
+
     return result
+
+
 
 @app.post("/midi-query/")
 async def midi_query(request: Request,file: UploadFile = File(...)):
@@ -235,4 +255,53 @@ async def midi_query(request: Request,file: UploadFile = File(...)):
 
 @app.post("/image-query/")
 async def image_query(request: Request,file: UploadFile = File(...)):
-    return {"message": "Image query endpoint not implemented yet."}
+    global current_dataset
+    print(file.filename)
+    print(current_dataset)
+
+    if not file.filename.endswith((".jpg", ".jpeg", ".png")):
+        raise HTTPException(status_code=400, detail="File must be an image file")
+    
+    pic_to_audio = {}
+    if newest_json_path:
+        try:
+            with open(newest_json_path, "r") as f:
+                json_data = json.load(f)
+                pic_to_audio = {entry["pic_name"]: entry["audio_file"] for entry in json_data}
+        except Exception:
+            pass
+    
+    print(pic_to_audio)
+
+    base_url = str(request.base_url)
+    upload_file_path = f"uploads/album/{file.filename}"
+
+    with open(upload_file_path, "wb") as f:
+        f.write(await file.read())
+    
+    print(upload_file_path)
+    print(current_dataset)
+    print(base_url)
+    
+    try:
+        timenow = time.time()
+        similarities, sorted_indices = image_processor.query_image(upload_file_path, eigenvectors, projected_dataset, mean_dataset)
+        result = image_processor.get_similarities(similarities, sorted_indices)
+        timeend = time.time()
+    except:
+        raise HTTPException(status_code=500, detail="Error processing image file")
+    
+    time_taken = timeend - timenow
+
+    result = [
+        {
+            "id": index + 1,
+            "cover": f"{base_url}datasets/{os.path.basename(current_dataset)}/album/{img}",
+            "title": img,
+            "src": f"{base_url}datasets/{os.path.basename(current_dataset)}/song/{pic_to_audio.get(img.split('.')[0], '')}",
+            "similarity_score": float(similarity),
+        }
+        for index, (img, similarity) in enumerate(result)
+    ]
+
+    return {"result": result, "time_taken": time_taken}
