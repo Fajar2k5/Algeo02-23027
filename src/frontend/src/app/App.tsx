@@ -2,6 +2,7 @@ import { useState } from "react";
 import Sidebar from "../components/sidebar";
 import bashamememeImage from "../assets/bashamememe.png";
 import wisadelImage from "../assets/wisadel.png";
+import ikuyoImage from "../assets/ikuyokita2.png";
 import Gallery, { Song } from "../components/gallery";
 import AudioPlayer from "../components/audioplayer";
 import { useEffect } from "react";
@@ -14,13 +15,11 @@ function App() {
     setSelectedSong(song);
   };
 
-  // const [refreshGallery, setRefreshGallery] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<"Image" | "MIDI" | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [galleryData, setGalleryData] = useState<Song[]>([]);
 
   const handleUploadSuccess = () => {
-    // setRefreshGallery((prev) => prev + 1);
     setSearchQuery('');
     fetchGallery();
   };
@@ -29,6 +28,9 @@ function App() {
     setSearchQuery(event.target.value);
   }
 
+  const handleQueryResult = (data: Song[]) => {
+    setGalleryData(data);
+  }
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/reset/", {
@@ -41,7 +43,6 @@ function App() {
 
   const fetchGallery = async () => {
     try {
-      // Send the search query, even if it's empty
       const response = await fetch(`http://127.0.0.1:8000/gallery?search=${searchQuery}`);
       const data = await response.json();
       setGalleryData(data);
@@ -59,7 +60,7 @@ function App() {
   return (
     <div className="min-h-screen bg-black px-4">
       <header className="p-2 bg-black h-20 w-full rounded-b-xl">
-        <div className="flex items-center space-x-4 gap-80">
+        <div className="flex items-center space-x-4 gap-64">
           <div className="flex items-center space-x-4">
             <img
               src={bashamememeImage}
@@ -72,7 +73,13 @@ function App() {
               alt="logo"
               className="w-16 h-16 rounded-full"
             />
+            <img
+              src={ikuyoImage}
+              alt="logo"
+              className="w-16 h-16 rounded-full"
+            />
           </div>
+          
           <form className="flex w-full max-w-sm mx-auto mt-6">
             <input
               type="search"
@@ -91,6 +98,8 @@ function App() {
             onUploadSuccess={handleUploadSuccess}
             onSelectedSong={handleSelectSong}
             activeTab={activeTab} 
+            galleryData={galleryData}
+            onQueryResult={handleQueryResult}
           />
         </div>
         <div className="col-span-1 md:col-span-7 rounded-xl ml-6 h-full">

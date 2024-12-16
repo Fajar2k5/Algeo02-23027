@@ -1,8 +1,8 @@
 "use client";
 
-import { act, useState } from "react";
+import { useState } from "react";
 import UploadSection from "./uploadbox";
-import ikuyoImage from "../assets/ikuyokita.png";
+import placeHolder from "../assets/placeholder.png";
 import axios from "axios";
 
 export interface Song {
@@ -16,32 +16,49 @@ interface SidebarProps {
   onUploadSuccess: () => void; // Callback to notify parent
   onSelectedSong: (song: Song) => void; // Callback to notify parent
   activeTab: "Image" | "MIDI" | null;
+  galleryData : Song[];
+  onQueryResult: (data: Song[]) => void;
 }
 
 
-const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab }) => {
-  const [previewSrc, setPreviewSrc] = useState<string | null>(ikuyoImage);
+const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab, onQueryResult }) => {
+  const [previewSrc, setPreviewSrc] = useState<string | null>(placeHolder);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
-
+  const [galleryData, setGalleryData] = useState<Song[]>([]);
+  const [queryFile, setQueryFile] = useState<File | null>(null);
+  
   const handleQuery = async () => {
     if (activeTab === "Image") {
       // const response = await axios.post("http://
       console.log("Querying for image...");
-    } else if (activeTab === "MIDI") {
-      // const response = await axios.post("http://
-      console.log("Querying for MIDI...");
+    } else if (activeTab === "MIDI" && queryFile !== null) {
+      try {
+        const formData = new FormData();
+        formData.append("file", queryFile);
+
+        const response = await axios.post("http://127.0.0.1:8000/midi-query/", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        alert("MIDI query success!");
+        onQueryResult(response.data);
+      } catch (error) {
+        console.error("Error querying MIDI:", error);
+      }
     } else {
       console.error("Invalid active tab:", activeTab);
     }
   };
 
   const handlePreviewChange = (src: string | null) => {
-    setPreviewSrc(src || ikuyoImage);
+    setPreviewSrc(src || placeHolder);
   };
 
   const handleDeletePreview = () => {
-    setPreviewSrc(ikuyoImage);
+    setPreviewSrc(placeHolder);
     setCurrentFileName(null);
+    setQueryFile(null);
   };
 
   const handleMidiClick = () => {
@@ -71,7 +88,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab }) => {
                     className="cursor-pointer relative w-full h-full"
                   >
                     <img
-                      src={previewSrc || ikuyoImage}
+                      src={previewSrc || placeHolder}
                       alt="MIDI Placeholder"
                       className="w-full h-full object-cover"
                     />
@@ -92,7 +109,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab }) => {
                       alt="Uploaded Preview"
                       className="w-full h-full object-cover"
                     />
-                    {previewSrc !== ikuyoImage && (
+                    {previewSrc !== placeHolder && (
                     <button
                       onClick={handleDeletePreview}
                       className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full"
@@ -119,10 +136,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab }) => {
         <div className="flex flex-col items-center">
           <button
             className={`mt-4 w-32 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-xs transition-colors duration-200 ${
-              !activeTab || previewSrc == ikuyoImage ? "opacity-50 cursor-not-allowed" : ""
+              !activeTab || previewSrc == placeHolder ? "opacity-50 cursor-not-allowed" : ""
             }`}
             onClick={handleQuery}
-            disabled={previewSrc == ikuyoImage || activeTab === null}
+            disabled={previewSrc == placeHolder || activeTab === null}
           >
             Query
           </button>
@@ -133,6 +150,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab }) => {
             onUploadSuccess={onUploadSuccess}
             onPreviewChange={handlePreviewChange}
             onFileNameChange={handleFileNameChange}
+            queryFile={(file: File | null) => setQueryFile(file)}
           />
         </div>
       </div>

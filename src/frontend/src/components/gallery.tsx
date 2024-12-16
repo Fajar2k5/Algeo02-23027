@@ -22,7 +22,7 @@ const Gallery: React.FC<GalleryProps> = ({
   galleryData, 
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true); // Maintain isLoading state
+  const [isLoading, setIsLoading] = useState(true); 
 
   const placeholder = "https://via.placeholder.com/100";
   const itemsPerPage = 12;
@@ -35,7 +35,7 @@ const Gallery: React.FC<GalleryProps> = ({
     setIsLoading(true);
     const timeout = setTimeout(() => {
       setIsLoading(false);
-    }, 300); // Simulate a small delay for loading
+    }, 300);
     return () => clearTimeout(timeout);
   }, [galleryData]);
 

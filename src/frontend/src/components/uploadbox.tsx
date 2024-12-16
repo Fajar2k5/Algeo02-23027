@@ -7,9 +7,10 @@ interface UploadSectionProps {
   onUploadSuccess: (uploadedUrl?: string) => void;
   onPreviewChange: (src: string | null) => void;
   onFileNameChange: (name: string | null) => void; 
+  queryFile: (file: File | null) => void;
 }
 
-const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess, onPreviewChange, onFileNameChange }) => {
+const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess, onPreviewChange, onFileNameChange, queryFile }) => {
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [localPreviewSrc, setLocalPreviewSrc] = useState<string | null>(null); // Local preview only
@@ -51,7 +52,6 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess, onPrevie
 
     if (file.type === "application/x-zip-compressed") {
       setLocalFileName(file.name);
-      // No preview for zip
       setLocalPreviewSrc(null);
     } else if (file.type === "application/json") {
       setLocalFileName(file.name);
@@ -86,31 +86,25 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess, onPrevie
       onUploadSuccess(response.data.url);
       setLocalFileName(null);
       setLocalPreviewSrc(null);
+      queryFile(selectedFile);
       if (activeTab === "Image" && localPreviewSrc) {
         onPreviewChange(localPreviewSrc); 
         onFileNameChange(localFileName);
       } else if (activeTab === "MIDI") {
-        // For MIDI, use a default placeholder icon after upload
         onPreviewChange("/midi_placeholder.png");
         onFileNameChange(localFileName);
       }else if (activeTab === "Mapper") {
-        // For Mapper, use a default placeholder icon after upload
         setMapperName(localFileName);
         onPreviewChange(null);
       }else if (activeTab === "Dataset") {
-        // For Dataset, use a default placeholder icon after upload
         setDatasetName(localFileName);
         onPreviewChange(null);
       }else {
-        // For other file types, no preview in sidebar
         onPreviewChange(null);
         onFileNameChange(localFileName);
       }
 
-      // Reset local states after successful upload
       setSelectedFile(null);
-      // Note: We do NOT call onPreviewChange(null) or onFileNameChange(null) here,
-      // because the sidebar should keep showing the uploaded file.
 
     } catch (error) {
       console.error("Upload failed:", error);
