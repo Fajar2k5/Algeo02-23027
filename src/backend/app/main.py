@@ -256,75 +256,90 @@ async def midi_query(request: Request,file: UploadFile = File(...)):
     ]
     return {"result": result, "time_taken": time_taken}
 
-@app.post("/image-query/")
-async def image_query(request: Request,file: UploadFile = File(...)):
-    global current_dataset
-    print(file.filename)
-    print(current_dataset)
 
-    if not file.filename.endswith((".jpg", ".jpeg", ".png")):
+@app.post("/image-query/")
+async def image_query(request: Request, file: UploadFile = File(...)):
+    global current_dataset
+
+    if not file.filename.lower().endswith((".jpg", ".jpeg", ".png")):
         raise HTTPException(status_code=400, detail="File must be an image file")
     
+    # Load the picture-to-audio mapping
     pic_to_audio = {}
     if newest_json_path:
         try:
             with open(newest_json_path, "r") as f:
                 json_data = json.load(f)
+                # Ensure these match your JSON structure exactly.
+                # For example, if JSON entries look like:
+                # { "pic_name": "cover.jpg", "audio_file": "track.mid" }
                 pic_to_audio = {entry["pic_name"]: entry["audio_file"] for entry in json_data}
         except Exception:
             pass
     
-    print(pic_to_audio)
-
     base_url = str(request.base_url)
     upload_file_path = f"uploads/album/{file.filename}"
 
     with open(upload_file_path, "wb") as f:
         f.write(await file.read())
-    
-    print(upload_file_path)
-    print(current_dataset)
-    print(base_url)
-    
+
     try:
+        # Perform the image query
         timenow = time.time()
-        similarities, sorted_indices = image_processor.query_image(upload_file_path, eigenvectors, projected_dataset, mean_dataset)
+        similarities, sorted_indices = image_processor.query_image(
+            upload_file_path, eigenvectors, projected_dataset, mean_dataset
+        )
         result = image_processor.get_similarities(similarities, sorted_indices)
         timeend = time.time()
-    except:
+    except Exception as e:
+        print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Error processing image file")
     
     time_taken = timeend - timenow
 
-    result = [
-        {
-            "id": index + 1,
-            "cover": f"{base_url}datasets/{os.path.basename(current_dataset)}/album/{img}",
-            "title": img,
-            "src": f"{base_url}datasets/{os.path.basename(current_dataset)}/song/{pic_to_audio.get(img.split('.')[0], '')}",
-            "similarity_score": float(similarity),
-        }
-        for index, (img, similarity) in enumerate(result)
-    ]
+    # Filter the results to only include those images for which we have a .mid file
+    midi_result = []
+    for index, (img, similarity) in enumerate(result):
+        # Check if we have a corresponding MIDI file for this image
+        midi_file_name = pic_to_audio.get(img, '')
+        if midi_file_name.endswith(".mid"):
+            midi_file_url = f"{base_url}datasets/{os.path.basename(current_dataset)}/song/{midi_file_name}"
+            cover_url = f"{base_url}datasets/{os.path.basename(current_dataset)}/album/{img}"
+            midi_result.append({
+                "id": index + 1,
+                "src": midi_file_url,
+                "title": midi_file_name,
+                "cover": cover_url,
+                "similarity_score": float(similarity)
+            })
 
-    return {"result": result, "time_taken": time_taken}
+    return {"result": midi_result, "time_taken": time_taken}
+
 
 @app.post("/humming-query/")
-async def humming_query(file: UploadFile = File(...)):
+async def humming_query(request = Request,file: UploadFile = File(...)):
     if not os.path.exists("uploads/humming"):
         os.makedirs("uploads/humming")
+    
+    if os.path.exists(f"uploads/humming/{file.filename}"):
+        os.remove(f"uploads/humming/{file.filename}")
 
     recording_path = f"uploads/humming/{file.filename}"
     with open(recording_path, "wb") as f:
         f.write(await file.read())
 
+    if os.path.exists("uploads/humming/humming_output.mid"):
+        os.remove("uploads/humming/humming_output.mid")
+    
+    if os.path.exists("uploads/humming/humming_output.wav"):
+        os.remove("uploads/humming/humming_output.wav")
+
     recording_output_ffmpeg = "uploads/humming/humming_output.wav"
     ffmpeg_binary = imageio_ffmpeg.get_ffmpeg_exe()
     
-    # Convert the uploaded audio to WAV
     ffmpeg.input(recording_path).output(
         recording_output_ffmpeg,
-        format='wav',  # Explicit format
+        format='wav',
         ar=44100,
         ac=1
     ).run(cmd=ffmpeg_binary, overwrite_output=True)
@@ -337,18 +352,11 @@ async def humming_query(file: UploadFile = File(...)):
         minimum_note_length=0.5
     )
 
-    # Filter out low-confidence notes
     filtered_events = [note for note in note_events if note[3] > 0.25]
 
     humming_output_path = "uploads/humming/humming_output.mid"
     audio_converter.save_note_events_to_midi(filtered_events, humming_output_path)
 
-    # DO NOT overwrite humming_output.mid again here.
-    # Remove the following lines:
-    # with open(humming_output_path, "wb") as f:
-    #     f.write(await file.read())
-
-    # Now proceed to extract notes and query as intended
     try:
         timenow = time.time()
         query_notes = midi_processor.get_midi_notes(humming_output_path)
@@ -369,16 +377,17 @@ async def humming_query(file: UploadFile = File(...)):
             pass
     
     time_taken = timeend - timenow
-
+    base_url = str(request.base_url)    
+    print(base_url)
     result = [
         {
             "id": index + 1,
-            "cover": f"{audio_to_pic.get(os.path.basename(midi_file[0]), '').split('.')[0]}.jpg"
+            "cover": f"http://127.0.0.1:8000/datasets/{os.path.basename(current_dataset)}/album/{audio_to_pic.get(os.path.basename(midi_file[0]), '').split('.')[0]}.jpg"
             if audio_to_pic.get(os.path.basename(midi_file[0]))
             else None,
             "title": os.path.basename(midi_file[0]),
-            "src": f"{os.path.basename(midi_file[0])}",
-            "similarity_score": float(midi_file[1]),
+            "src": f"http://127.0.0.1:8000/datasets/{os.path.basename(current_dataset)}/song/{os.path.basename(midi_file[0])}",
+            "similarity_score": float(midi_file[1]), 
         }
         for index, midi_file in enumerate(sorted_midi)
     ]
