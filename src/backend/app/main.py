@@ -7,7 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import midi_processor,image_processor,mic_controller,audio_converter
+from basic_pitch.inference import predict
+from basic_pitch import ICASSP_2022_MODEL_PATH
 import time
+import ffmpeg
+import imageio_ffmpeg
 
 app = FastAPI()
 
@@ -308,22 +312,77 @@ async def image_query(request: Request,file: UploadFile = File(...)):
 @app.post("/humming-query/")
 async def humming_query(file: UploadFile = File(...)):
     if not os.path.exists("uploads/humming"):
-            os.makedirs("uploads/humming")
-    with open(f"uploads/humming/{file.filename}", "wb") as f:
-        f.write(await file.read())
+        os.makedirs("uploads/humming")
 
     recording_path = f"uploads/humming/{file.filename}"
+    with open(recording_path, "wb") as f:
+        f.write(await file.read())
 
+    recording_output_ffmpeg = "uploads/humming/humming_output.wav"
+    ffmpeg_binary = imageio_ffmpeg.get_ffmpeg_exe()
+    
+    # Convert the uploaded audio to WAV
+    ffmpeg.input(recording_path).output(
+        recording_output_ffmpeg,
+        format='wav',  # Explicit format
+        ar=44100,
+        ac=1
+    ).run(cmd=ffmpeg_binary, overwrite_output=True)
+    
     model_output, midi_data, note_events = predict(
-        recording_path,
+        recording_output_ffmpeg,
         model_or_model_path=ICASSP_2022_MODEL_PATH,
         onset_threshold=0.6,
         frame_threshold=0.3,
         minimum_note_length=0.5
     )
 
-    file_note_events = note_events;
     # Filter out low-confidence notes
-    filtered_events = [note for note in file_note_events if note[3] > 0.25]
+    filtered_events = [note for note in note_events if note[3] > 0.25]
 
-    # return {"message": "File received", "filename": file.filename}
+    humming_output_path = "uploads/humming/humming_output.mid"
+    audio_converter.save_note_events_to_midi(filtered_events, humming_output_path)
+
+    # DO NOT overwrite humming_output.mid again here.
+    # Remove the following lines:
+    # with open(humming_output_path, "wb") as f:
+    #     f.write(await file.read())
+
+    # Now proceed to extract notes and query as intended
+    try:
+        timenow = time.time()
+        query_notes = midi_processor.get_midi_notes(humming_output_path)
+        queries = midi_processor.get_feature(query_notes)
+        sorted = midi_processor.compare(preprocess_result, queries)
+        sorted_midi = midi_processor.get_similarities(sorted)
+        timeend = time.time()
+    except:
+        raise HTTPException(status_code=500, detail="Error processing humming file")
+
+    audio_to_pic = {}
+    if newest_json_path:
+        try:
+            with open(newest_json_path, "r") as f:
+                json_data = json.load(f)
+                audio_to_pic = {entry["audio_file"]: entry["pic_name"] for entry in json_data}
+        except Exception:
+            pass
+    
+    time_taken = timeend - timenow
+
+    result = [
+        {
+            "id": index + 1,
+            "cover": f"{audio_to_pic.get(os.path.basename(midi_file[0]), '').split('.')[0]}.jpg"
+            if audio_to_pic.get(os.path.basename(midi_file[0]))
+            else None,
+            "title": os.path.basename(midi_file[0]),
+            "src": f"{os.path.basename(midi_file[0])}",
+            "similarity_score": float(midi_file[1]),
+        }
+        for index, midi_file in enumerate(sorted_midi)
+    ]
+
+    print(result)
+
+    return {"result": result, "time_taken": time_taken}

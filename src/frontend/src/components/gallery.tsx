@@ -15,6 +15,7 @@ interface GalleryProps {
   activeTab: "Image" | "MIDI" | null;
   setActiveTab: React.Dispatch<React.SetStateAction<"Image" | "MIDI" | null>>;
   galleryData: Song[]; 
+  setGalleryData: React.Dispatch<React.SetStateAction<Song[]>>;
 }
 
 const Gallery: React.FC<GalleryProps> = ({
@@ -22,6 +23,7 @@ const Gallery: React.FC<GalleryProps> = ({
   activeTab,
   setActiveTab,
   galleryData, 
+  setGalleryData
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true); 
@@ -61,11 +63,15 @@ const Gallery: React.FC<GalleryProps> = ({
     setCurrentPage(1);
   }, [galleryData]);
 
+  const handleQueryResult = (data: Song[]) => {
+    setGalleryData(data);
+  }
+
   return (
     <div className="bg-[#121212] rounded-xl p-4 h-[600px] flex flex-col">
       <div className="relative mb-4">
       <div className="absolute left-1">
-        <VoiceCaptureButton />
+        <VoiceCaptureButton onQueryResult={handleQueryResult}/>
       </div>
 
       <div className="flex justify-center space-x-4">
