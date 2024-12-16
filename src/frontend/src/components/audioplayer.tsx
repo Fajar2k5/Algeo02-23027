@@ -368,21 +368,31 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ selectedSong }) => {
     <div className="flex flex-col bg-black text-white p-4 rounded-lg gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <img
-            src={selectedSong?.cover || "/default-cover.jpg"}
-            alt="Album Cover"
-            className="w-12 h-12 rounded-lg"
-          />
-          <div>
-            <p className="text-sm font-bold">
-              {selectedSong?.title || "No Song Selected"}
+          {selectedSong ? (
+            <>
+              <img
+          src={selectedSong.cover || "/default-cover.jpg"}
+          alt="Album Cover"
+          className="w-12 h-12 rounded-lg"
+              />
+              <div>
+          <p className="text-sm font-bold">{selectedSong.title}</p>
+          {midiData && (
+            <p className="text-xs text-gray-400">
+              {midiData.tracks.length} tracks loaded
             </p>
-            {midiData && (
-              <p className="text-xs text-gray-400">
-                {midiData.tracks.length} tracks loaded
-              </p>
-            )}
-          </div>
+          )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-12 h-12 rounded-lg bg-gray-800 animate-pulse" />
+              <div>No song selected
+          <div className="h-2 w-32" />
+          <div className="h-4 w-24 bg-gray-800 rounded animate-pulse" />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex items-center space-x-4">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import VoiceCaptureButton from "./recorder";
 
 export interface Song {
   id: number;
@@ -61,7 +62,14 @@ const Gallery: React.FC<GalleryProps> = ({
 
   return (
     <div className="bg-[#121212] rounded-xl p-4 h-[570px] flex flex-col">
-      <div className="flex justify-center space-x-4 mb-4">
+      <div className="relative mb-4">
+      {/* VoiceCaptureButton aligned to the left */}
+      <div className="absolute left-1">
+        <VoiceCaptureButton />
+      </div>
+
+      {/* Tabs centered */}
+      <div className="flex justify-center space-x-4">
         {["Image", "MIDI"].map((tab) => (
           <button
             key={tab}
@@ -76,6 +84,8 @@ const Gallery: React.FC<GalleryProps> = ({
           </button>
         ))}
       </div>
+    </div>
+
 
       <div className="flex-grow flex flex-col justify-between">
         <div className="flex justify-center items-start pt-2">

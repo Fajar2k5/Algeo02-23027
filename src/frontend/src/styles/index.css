@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+  @apply bg-black;
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -45,15 +49,4 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
-}
-
-midi-player::part(control-panel) {
-  color: white;
-  background: black;
-  border-radius: 0px;
-  width: 70vw;
-}
-
-midi-player::part(play-button) {
-  background: white;
 }
