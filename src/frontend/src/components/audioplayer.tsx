@@ -3,6 +3,7 @@ import { Play, Pause, Volume2 } from "lucide-react";
 import * as Tone from "tone";
 import { Midi } from "@tonejs/midi";
 import { Song } from "./gallery";
+import placeHolder from "../assets/placeholder.png";
 
 declare global {
   interface Window {
@@ -35,7 +36,13 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ selectedSong }) => {
 
   const isAudioFile = (fileName: string) => {
     const audioExtensions = ['.mp3', '.wav', '.midi', '.mid'];
-    return audioExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+    try {
+      return audioExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+    }
+    catch (error) {
+      console.error("Error checking audio file:", error);
+      return false;
+    }
   };
 
   // Initialize
@@ -376,7 +383,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ selectedSong }) => {
           {selectedSong ? (
             <>
               <img
-                src={selectedSong.cover || "/default-cover.jpg"}
+                src={selectedSong.cover || placeHolder}
                 alt="Album Cover"
                 className="w-12 h-12 rounded-lg"
               />
