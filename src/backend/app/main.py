@@ -312,16 +312,23 @@ async def image_query(request: Request,file: UploadFile = File(...)):
 @app.post("/humming-query/")
 async def humming_query(file: UploadFile = File(...)):
     if not os.path.exists("uploads/humming"):
-            os.makedirs("uploads/humming")
-    with open(f"uploads/humming/{file.filename}", "wb") as f:
-        f.write(await file.read())
+        os.makedirs("uploads/humming")
 
     recording_path = f"uploads/humming/{file.filename}"
+    with open(recording_path, "wb") as f:
+        f.write(await file.read())
+
     recording_output_ffmpeg = "uploads/humming/humming_output.wav"
     ffmpeg_binary = imageio_ffmpeg.get_ffmpeg_exe()
+    
+    # Convert the uploaded audio to WAV
     ffmpeg.input(recording_path).output(
-        recording_output_ffmpeg, ar=44100, ac=1
-    ).run(cmd=ffmpeg_binary)
+        recording_output_ffmpeg,
+        format='wav',  # Explicit format
+        ar=44100,
+        ac=1
+    ).run(cmd=ffmpeg_binary, overwrite_output=True)
+    
     model_output, midi_data, note_events = predict(
         recording_output_ffmpeg,
         model_or_model_path=ICASSP_2022_MODEL_PATH,
@@ -330,19 +337,18 @@ async def humming_query(file: UploadFile = File(...)):
         minimum_note_length=0.5
     )
 
-    file_note_events = note_events
     # Filter out low-confidence notes
-    filtered_events = [note for note in file_note_events if note[3] > 0.25]
-
-    audio_converter.save_note_events_to_midi(filtered_events, "uploads/humming/humming_output.mid")
+    filtered_events = [note for note in note_events if note[3] > 0.25]
 
     humming_output_path = "uploads/humming/humming_output.mid"
+    audio_converter.save_note_events_to_midi(filtered_events, humming_output_path)
 
-    with open(humming_output_path, "wb") as f:
-        f.write(await file.read())
-    
-    print(humming_output_path)
-    print("TEST")
+    # DO NOT overwrite humming_output.mid again here.
+    # Remove the following lines:
+    # with open(humming_output_path, "wb") as f:
+    #     f.write(await file.read())
+
+    # Now proceed to extract notes and query as intended
     try:
         timenow = time.time()
         query_notes = midi_processor.get_midi_notes(humming_output_path)
@@ -376,5 +382,7 @@ async def humming_query(file: UploadFile = File(...)):
         }
         for index, midi_file in enumerate(sorted_midi)
     ]
+
     print(result)
+
     return {"result": result, "time_taken": time_taken}

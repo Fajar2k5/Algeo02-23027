@@ -82,10 +82,7 @@ function VoiceCaptureButton({
       const { result, time_taken } = response.data;
 
       // Pass the result to the onQueryResult callback
-      if (result && Array.isArray(result)) {
-        onQueryResult(result);
-      }
-
+      onQueryResult(result);
       alert(`Humming query success! Time taken: ${time_taken} seconds`);
     } catch (error) {
       console.error("Error sending audio to backend:", error);

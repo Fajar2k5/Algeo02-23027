@@ -109,6 +109,7 @@ function App() {
             activeTab={activeTab}
             setActiveTab={setActiveTab} 
             galleryData={galleryData}
+            setGalleryData={setGalleryData}
           />
         </div>
       </main>
