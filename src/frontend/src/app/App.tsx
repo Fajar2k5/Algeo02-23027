@@ -2,7 +2,7 @@ import { useState } from "react";
 import Sidebar from "../components/sidebar";
 import bashamememeImage from "../assets/bashamememe.png";
 import wisadelImage from "../assets/wisadel.png";
-import ikuyoImage from "../assets/ikuyokita2.png";
+import ikuyoImage from "../assets/ikuyokita.png";
 import Gallery, { Song } from "../components/gallery";
 import AudioPlayer from "../components/audioplayer";
 import { useEffect } from "react";

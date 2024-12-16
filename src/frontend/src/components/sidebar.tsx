@@ -24,8 +24,8 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab, onQueryResult }) => {
   const [previewSrc, setPreviewSrc] = useState<string | null>(placeHolder);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
-  const [galleryData, setGalleryData] = useState<Song[]>([]);
   const [queryFile, setQueryFile] = useState<File | null>(null);
+  const [queryTime, setQueryTime] = useState<number | null>(null);
   
   const handleQuery = async () => {
     if (activeTab === "Image") {
@@ -41,10 +41,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab, onQueryRes
             "Content-Type": "multipart/form-data",
           },
         });
+        const { result, time_taken } = response.data;
         alert("MIDI query success!");
-        onQueryResult(response.data);
+        onQueryResult(result);
+        setQueryTime(time_taken);
       } catch (error) {
         console.error("Error querying MIDI:", error);
+        setQueryTime(null);
       }
     } else {
       console.error("Invalid active tab:", activeTab);
@@ -59,6 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab, onQueryRes
     setPreviewSrc(placeHolder);
     setCurrentFileName(null);
     setQueryFile(null);
+    setQueryTime(null);
   };
 
   const handleMidiClick = () => {
@@ -74,7 +78,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab, onQueryRes
   const currentQueryText = previewSrc && currentFileName 
     ? `Current Query: ${currentFileName}` 
     : "Current Query: -";
-
+  
+  const currentQueryTime = queryTime !== null
+    ? `Time Elapsed: ${queryTime.toFixed(2)} seconds`
+    : "Time Elapsed: -";
+  
   return (
     <section className="bg-[#121212] rounded-xl h-full">
       <div className="flex flex-col h-full">
@@ -131,6 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onUploadSuccess,activeTab, onQueryRes
 
         <div className="flex flex-col items-center">
           <p className="text-white text-xs font-semibold mb-2">{currentQueryText}</p>
+          <p className="text-white text-xs font-semibold mb-2">{currentQueryTime}</p>
         </div>
 
         <div className="flex flex-col items-center">

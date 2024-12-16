@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import midi_processor
-
+import time
 
 app = FastAPI()
 
@@ -51,7 +51,6 @@ async def upload_file(file: UploadFile = File(...)):
     global current_dataset, newest_json_path,preprocess_result
     file_type = file.content_type
 
-    # Validate file type
     if file_type not in [
         "image/png", 
         "image/jpeg", 
@@ -61,17 +60,14 @@ async def upload_file(file: UploadFile = File(...)):
     ]:
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
-    # Handle non-ZIP files (image, MIDI, JSON)
     if file_type != "application/x-zip-compressed":
         directory = f"uploads/{'album' if file_type.startswith('image') else 'song' if file_type == 'audio/mid' else 'application'}"
         os.makedirs(directory, exist_ok=True)
 
-        # Save the file
         file_location = os.path.join(directory, file.filename)
         with open(file_location, "wb") as buffer:
             buffer.write(await file.read())
 
-        # If JSON file, update global newest_json_path
         if file_type == "application/json":
             newest_json_path = file_location
             return {
@@ -79,7 +75,6 @@ async def upload_file(file: UploadFile = File(...)):
                 "message": "JSON file uploaded and set as the newest."
             }
 
-        # For images or MIDI files
         return {"file_path": file_location, "message": "File uploaded successfully."}
 
     
@@ -145,7 +140,6 @@ async def upload_file(file: UploadFile = File(...)):
 async def get_gallery(request: Request, search: str = ""):
     global current_dataset
 
-    # Return empty list if no dataset is active
     if not current_dataset or not os.path.exists(current_dataset):
         return []
 
@@ -171,7 +165,7 @@ async def get_gallery(request: Request, search: str = ""):
     if search.strip():
         gallery_files = [file for file in gallery_files if search.lower() in file.lower()]
 
-    filtered_gallery_files = [file for file in gallery_files if file in audio_to_pic]
+    # filtered_gallery_files = [file for file in gallery_files if file in audio_to_pic]
 
     global result
 
@@ -184,7 +178,7 @@ async def get_gallery(request: Request, search: str = ""):
             "title": midi_file,
             "src": f"{base_url}datasets/{os.path.basename(current_dataset)}/song/{midi_file}",
         }
-        for index, midi_file in enumerate(filtered_gallery_files)
+        for index, midi_file in enumerate(gallery_files)
     ]
 
     return result
@@ -203,10 +197,12 @@ async def midi_query(request: Request,file: UploadFile = File(...)):
         f.write(await file.read())
 
     try:
+        timenow = time.time()
         query_notes = midi_processor.get_midi_notes(upload_file_path)
         queries = midi_processor.get_feature(query_notes)
         sorted = midi_processor.compare(preprocess_result, queries)
         sorted_midi = midi_processor.get_similarities(sorted)
+        timeend = time.time()
         
     except:
         raise HTTPException(status_code=500, detail="Error processing MIDI file")
@@ -219,7 +215,8 @@ async def midi_query(request: Request,file: UploadFile = File(...)):
                 audio_to_pic = {entry["audio_file"]: entry["pic_name"] for entry in json_data}
         except Exception:
             pass
-
+    
+    time_taken = timeend - timenow
 
     result = [
         {
@@ -234,6 +231,8 @@ async def midi_query(request: Request,file: UploadFile = File(...)):
         for index, midi_file in enumerate(sorted_midi)
     ]
 
-    return result
+    return {"result": result, "time_taken": time_taken}
 
-    
+@app.post("/image-query/")
+async def image_query(request: Request,file: UploadFile = File(...)):
+    return {"message": "Image query endpoint not implemented yet."}

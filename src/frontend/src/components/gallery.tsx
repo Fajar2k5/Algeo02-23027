@@ -7,6 +7,7 @@ export interface Song {
   cover: string | null;
   title: string;
   src: string;
+  similarity_score?: number;
 }
 
 interface GalleryProps {
@@ -61,14 +62,12 @@ const Gallery: React.FC<GalleryProps> = ({
   }, [galleryData]);
 
   return (
-    <div className="bg-[#121212] rounded-xl p-4 h-[570px] flex flex-col">
+    <div className="bg-[#121212] rounded-xl p-4 h-[600px] flex flex-col">
       <div className="relative mb-4">
-      {/* VoiceCaptureButton aligned to the left */}
       <div className="absolute left-1">
         <VoiceCaptureButton />
       </div>
 
-      {/* Tabs centered */}
       <div className="flex justify-center space-x-4">
         {["Image", "MIDI"].map((tab) => (
           <button
@@ -108,6 +107,9 @@ const Gallery: React.FC<GalleryProps> = ({
                   />
                   <div className="mt-1 text-white text-center">
                     <h3 className="text-xs font-medium truncate w-full">{item.title}</h3>
+                    {item.similarity_score !== undefined && (
+                      <p className="text-xs text-gray-400">{(item.similarity_score * 100).toFixed(2)}%</p>
+                    )}
                   </div>
                 </div>
               ))}
