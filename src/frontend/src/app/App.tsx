@@ -62,12 +62,12 @@ function App() {
       <header className="p-2 bg-black h-20 w-full rounded-b-xl">
         <div className="flex items-center space-x-4 gap-64">
           <div className="flex items-center space-x-4">
+            <h1 className="text-5xl mt-4 font-bold text-green-500">Farizzler</h1> 
             <img
               src={bashamememeImage}
               alt="logo"
               className="w-16 h-16 rounded-full"
             />
-            <h1 className="text-5xl mt-4 font-bold text-green-500">Farizzler</h1> 
             <img
               src={wisadelImage}
               alt="logo"
