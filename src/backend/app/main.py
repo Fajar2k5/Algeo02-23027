@@ -250,7 +250,6 @@ async def midi_query(request: Request,file: UploadFile = File(...)):
         }
         for index, midi_file in enumerate(sorted_midi)
     ]
-
     return {"result": result, "time_taken": time_taken}
 
 @app.post("/image-query/")
@@ -305,3 +304,10 @@ async def image_query(request: Request,file: UploadFile = File(...)):
     ]
 
     return {"result": result, "time_taken": time_taken}
+
+@app.post("/humming-query/")
+async def humming_query(file: UploadFile = File(...)):
+    with open(f"uploads/{file.filename}", "wb") as f:
+        f.write(await file.read())
+
+    return {"message": "File received", "filename": file.filename}
