@@ -6,7 +6,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-import midi_processor,image_processor
+import midi_processor,image_processor,mic_controller,audio_converter
 import time
 
 app = FastAPI()
@@ -250,7 +250,6 @@ async def midi_query(request: Request,file: UploadFile = File(...)):
         }
         for index, midi_file in enumerate(sorted_midi)
     ]
-
     return {"result": result, "time_taken": time_taken}
 
 @app.post("/image-query/")
@@ -305,3 +304,26 @@ async def image_query(request: Request,file: UploadFile = File(...)):
     ]
 
     return {"result": result, "time_taken": time_taken}
+
+@app.post("/humming-query/")
+async def humming_query(file: UploadFile = File(...)):
+    if not os.path.exists("uploads/humming"):
+            os.makedirs("uploads/humming")
+    with open(f"uploads/humming/{file.filename}", "wb") as f:
+        f.write(await file.read())
+
+    recording_path = f"uploads/humming/{file.filename}"
+
+    model_output, midi_data, note_events = predict(
+        recording_path,
+        model_or_model_path=ICASSP_2022_MODEL_PATH,
+        onset_threshold=0.6,
+        frame_threshold=0.3,
+        minimum_note_length=0.5
+    )
+
+    file_note_events = note_events;
+    # Filter out low-confidence notes
+    filtered_events = [note for note in file_note_events if note[3] > 0.25]
+
+    # return {"message": "File received", "filename": file.filename}

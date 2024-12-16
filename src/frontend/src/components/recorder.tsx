@@ -1,113 +1,168 @@
+"use client";
 import { useState, useEffect, useRef } from "react";
 import { Mic } from "lucide-react";
+import axios from "axios";
 
-interface AudioContextWithClose extends AudioContext {
-  close: () => Promise<void>;
-}
-
-const VoiceCaptureButton = () => {
+function VoiceCaptureButton(): JSX.Element {
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [recordingTime, setRecordingTime] = useState<number>(0);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [volume, setVolume] = useState<number>(0);
-  const audioContextRef = useRef<AudioContextWithClose | null>(null);
+  const [volume, setVolume] = useState<number>(0); // Added state for volume
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const silenceStartRef = useRef<number | null>(null);
+  const RECORDING_MAX_DURATION = 240; // 4 minutes in seconds
+  const SILENCE_THRESHOLD = 0.6;
+  const SILENCE_DURATION = 1500; // 1.5 seconds
 
-  const VOLUME_THRESHOLD = 0.6;
-  const SILENCE_DURATION = 1500; // 1.5 detik
+  useEffect(() => {
+    const initAudioStream = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        setAudioStream(stream);
 
-  const startAudioCapture = async (): Promise<void> => {
+        const recorder = new MediaRecorder(stream);
+        setMediaRecorder(recorder);
+
+        const audioContext = new AudioContext();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.4;
+
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyserRef.current = analyser;
+      } catch (error) {
+        console.error("Error accessing microphone:", error);
+      }
+    };
+
+    initAudioStream();
+
+    return () => {
+      if (audioStream) {
+        audioStream.getTracks().forEach((track) => track.stop());
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+
+  const sendAudioToEndpoint = async (audioBlob: Blob) => {
+    const formData = new FormData();
+    formData.append("file", audioBlob, "recording.wav");
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-      
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      audioContextRef.current = new AudioContextClass() as AudioContextWithClose;
-      
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 1024;
-      analyserRef.current.smoothingTimeConstant = 0.4;
-      
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      source.connect(analyserRef.current);
-
-      const bufferLength = analyserRef.current.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      const updateVolume = () => {
-        if (!analyserRef.current) return;
-        
-        analyserRef.current.getByteFrequencyData(dataArray);
-        
-        const sum = dataArray.reduce((acc, val) => acc + val, 0);
-        const average = sum / bufferLength;
-        
-        const normalizedVolume = Math.pow(average / 128, 0.5) * 2;
-        const clampedVolume = Math.min(Math.max(normalizedVolume, 0), 3);
-        
-        setVolume(clampedVolume);
-
-        if (clampedVolume < VOLUME_THRESHOLD) {
-          if (silenceStartRef.current === null) {
-            silenceStartRef.current = Date.now();
-          } else if (Date.now() - silenceStartRef.current >= SILENCE_DURATION) {
-            handleClose();
-            return;
-          }
-        } else {
-          silenceStartRef.current = null;
-        }
-        
-        animationFrameRef.current = requestAnimationFrame(updateVolume);
-      };
-
-      updateVolume();
+      const response = await axios.post("http://127.0.0.1:8000/humming-query/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      console.log("Audio uploaded successfully:", response.data);
     } catch (error) {
-      console.error("Error accessing microphone:", error);
+      console.error("Error sending audio to backend:", error);
     }
-  };
-
-  const stopAudioCapture = async (): Promise<void> => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
-    }
-
-    if (audioContextRef.current) {
-      await audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
-    silenceStartRef.current = null;
-    setVolume(0);
-  };
-
-  const showDialog = () => {
-    setDialogOpen(true);
-    void startAudioCapture();
   };
 
   useEffect(() => {
-    return () => {
-      void stopAudioCapture();
-    };
-  }, [dialogOpen]);
+    if (mediaRecorder) {
+      const audioChunks: BlobPart[] = [];
+      mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
 
-  const handleClose = () => {
+      mediaRecorder.onstop = () => {
+        const audioFile = new Blob(audioChunks, { type: "audio/wav" });
+        sendAudioToEndpoint(audioFile);
+      };
+    }
+  }, [mediaRecorder]);
+
+  const detectSilence = () => {
+    const analyser = analyserRef.current;
+    if (!analyser) return;
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(dataArray);
+
+    const average = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length;
+    const normalizedVolume = Math.pow(average / 128, 0.5) * 2;
+
+    setVolume(normalizedVolume); // Update volume state
+
+    if (normalizedVolume < SILENCE_THRESHOLD) {
+      if (!silenceTimerRef.current) {
+        silenceTimerRef.current = setTimeout(() => {
+          handleClose();
+        }, SILENCE_DURATION);
+      }
+    } else {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+    }
+
+    animationFrameRef.current = requestAnimationFrame(detectSilence);
+  };
+
+  const startRecording = (): void => {
+    if (mediaRecorder && audioStream) {
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prevTime) => {
+          if (prevTime >= RECORDING_MAX_DURATION - 1) {
+            stopRecording();
+            return RECORDING_MAX_DURATION;
+          }
+          return prevTime + 1;
+        });
+      }, 1000);
+
+      detectSilence();
+    }
+  };
+
+  const stopRecording = (): void => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    }
+  };
+
+  const handleOpen = (): void => {
+    setDialogOpen(true);
+    startRecording();
+  };
+
+  const handleClose = (): void => {
     setDialogOpen(false);
-    void stopAudioCapture();
+    stopRecording();
   };
 
   return (
     <div>
       <button
-        onClick={showDialog}
+        onClick={handleOpen}
         className="bg-zinc-800 hover:opacity-80 text-white font-bold p-2 rounded-full hover:bg-zinc-600"
         type="button"
       >
@@ -129,7 +184,7 @@ const VoiceCaptureButton = () => {
               <div 
                 className="absolute inset-0 bg-zinc-500 rounded-full transition-transform duration-75 opacity-25"
                 style={{
-                  transform: `scale(${1 + volume})`,
+                  transform: `scale(${1 + volume})`, // Use the volume state
                 }}
               />
               <div className="absolute inset-0 flex items-center justify-center">
@@ -150,6 +205,6 @@ const VoiceCaptureButton = () => {
       )}
     </div>
   );
-};
+}
 
 export default VoiceCaptureButton;
