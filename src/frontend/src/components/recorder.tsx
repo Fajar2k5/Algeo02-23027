@@ -7,18 +7,15 @@ interface AudioContextWithClose extends AudioContext {
 
 const VoiceCaptureButton = () => {
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [countdown, setCountdown] = useState<number>(15);
   const [volume, setVolume] = useState<number>(0);
   const audioContextRef = useRef<AudioContextWithClose | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const silenceStartRef = useRef<number | null>(null);
 
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
+  const VOLUME_THRESHOLD = 0.6;
+  const SILENCE_DURATION = 1500; // 1.5 detik
 
   const startAudioCapture = async (): Promise<void> => {
     try {
@@ -47,10 +44,21 @@ const VoiceCaptureButton = () => {
         const average = sum / bufferLength;
         
         const normalizedVolume = Math.pow(average / 128, 0.5) * 2;
-        
         const clampedVolume = Math.min(Math.max(normalizedVolume, 0), 3);
         
         setVolume(clampedVolume);
+
+        if (clampedVolume < VOLUME_THRESHOLD) {
+          if (silenceStartRef.current === null) {
+            silenceStartRef.current = Date.now();
+          } else if (Date.now() - silenceStartRef.current >= SILENCE_DURATION) {
+            handleClose();
+            return;
+          }
+        } else {
+          silenceStartRef.current = null;
+        }
+        
         animationFrameRef.current = requestAnimationFrame(updateVolume);
       };
 
@@ -76,34 +84,19 @@ const VoiceCaptureButton = () => {
       audioContextRef.current = null;
     }
 
+    silenceStartRef.current = null;
     setVolume(0);
   };
 
   const showDialog = () => {
     setDialogOpen(true);
-    setCountdown(15);
     void startAudioCapture();
   };
 
   useEffect(() => {
-    if (dialogOpen) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setDialogOpen(false);
-            void stopAudioCapture();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => {
-        clearInterval(timer);
-        void stopAudioCapture();
-      };
-    }
+    return () => {
+      void stopAudioCapture();
+    };
   }, [dialogOpen]);
 
   const handleClose = () => {
@@ -144,7 +137,7 @@ const VoiceCaptureButton = () => {
               </div>
             </div>
             <p className="text-lg font-bold mb-2">Voice Capture Active</p>
-            <p className="text-sm mb-3">Time Remaining: {formatTime(countdown)}</p>
+            <p className="text-sm mb-3">Start humming the song</p>
             <button 
               className="focus:outline-none bg-black active:bg-zinc-400 text-white active:text-black px-4 py-2 rounded-lg hover:bg-red-500"
               onClick={handleClose}
